@@ -11,10 +11,6 @@ class CompanySeeder extends Seeder
 {
     public function run(): void
     {
-        // CORRIGIDO: try/finally garante que as FKs são SEMPRE reativadas,
-        // mesmo que uma exceção ocorra no meio do seeder.
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
         try {
             // ── Empresa ───────────────────────────────────────
             $companyId = (string) Str::uuid();
@@ -148,7 +144,7 @@ class CompanySeeder extends Seeder
             $interestLeads = array_rand($leadIds, 70);
             $usedPairs     = [];
             foreach ($interestLeads as $idx) {
-                $qtd           = rand(1, 3);
+                $qtd            = rand(1, 3);
                 $prodsSorteados = array_rand($productIds, min($qtd, count($productIds)));
                 if (!is_array($prodsSorteados)) $prodsSorteados = [$prodsSorteados];
                 foreach ($prodsSorteados as $pidx) {
@@ -218,9 +214,9 @@ class CompanySeeder extends Seeder
             $this->command->info('🔑 Senha: password');
             $this->command->info('📊 90 leads, produtos, conversas e métricas gerados!');
 
-        } finally {
-            // CORRIGIDO: finally garante que as FKs são reativadas mesmo em caso de erro
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        } catch (\Exception $e) {
+            $this->command->error('❌ Erro ao seed: ' . $e->getMessage());
+            throw $e;
         }
     }
 }
