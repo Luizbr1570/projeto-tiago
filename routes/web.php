@@ -10,6 +10,7 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FollowupController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\MetaEmbeddedSignupController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductInterestController;
 use App\Http\Controllers\SettingsController;
@@ -85,5 +86,18 @@ Route::middleware(['auth', 'company.active'])->group(function () {
 
         Route::get('/metrics', [DailyMetricController::class, 'index'])->name('metrics.index');
         Route::post('/metrics', [DailyMetricController::class, 'store'])->name('metrics.store');
+
+        Route::get('/admin/meta/embedded-signup', [MetaEmbeddedSignupController::class, 'index'])
+            ->name('admin.meta.embedded-signup.index');
+        Route::get('/admin/meta/embedded-signup/callback', [MetaEmbeddedSignupController::class, 'callback'])
+            ->name('admin.meta.embedded-signup.callback');
+        Route::post('/admin/meta/embedded-signup/config', [MetaEmbeddedSignupController::class, 'saveConfig'])
+            ->name('admin.meta.embedded-signup.config.save');
+
+        Route::prefix('/api/meta/embedded-signup')->name('api.meta.embedded-signup.')->group(function () {
+            Route::post('/session', [MetaEmbeddedSignupController::class, 'storeSession'])->name('session.store');
+            Route::get('/latest', [MetaEmbeddedSignupController::class, 'latest'])->name('latest');
+            Route::get('/sessions', [MetaEmbeddedSignupController::class, 'sessions'])->name('sessions');
+        });
     });
 });

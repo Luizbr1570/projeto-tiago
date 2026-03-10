@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'meta' => [
+        'app_id' => env('META_APP_ID'),
+        'graph_api_version' => env('META_GRAPH_API_VERSION', 'v25.0'),
+        'configuration_id' => env('META_CONFIGURATION_ID'),
+        'redirect_uri' => env('META_REDIRECT_URI'),
+        'system_user_token' => env('META_SYSTEM_USER_TOKEN'),
+    ],
 ];
