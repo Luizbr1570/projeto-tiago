@@ -134,10 +134,6 @@ class MetricsService
 
     // ─── Leads únicos vs recorrentes ────────────────────────────
 
-    /**
-     * CORRIGIDO: leadsUnique respeita o período selecionado.
-     * Antes ignorava o período e contava todos os leads históricos.
-     */
     public function leadsUnique(): int
     {
         return $this->applyPeriod($this->query(Lead::class))
@@ -145,11 +141,6 @@ class MetricsService
             ->count('phone');
     }
 
-    /**
-     * CORRIGIDO: leadsNew conta leads cujo telefone aparece
-     * pela PRIMEIRA VEZ no período — ou seja, nunca existiu antes dele.
-     * Antes contava todos os leads do mês sem essa distinção.
-     */
     public function leadsNew(): int
     {
         $periodStart = match($this->period) {
@@ -158,7 +149,6 @@ class MetricsService
             default  => now()->startOfDay(),
         };
 
-        // Phones que aparecem no período mas NÃO existiam antes dele
         return $this->query(Lead::class)
             ->where('created_at', '>=', $periodStart)
             ->whereNotIn('phone', function ($sub) use ($periodStart) {
@@ -172,10 +162,6 @@ class MetricsService
             ->count('phone');
     }
 
-    /**
-     * CORRIGIDO: leadsRecurring respeita o período.
-     * Conta phones que aparecem mais de uma vez dentro do período.
-     */
     public function leadsRecurring(): int
     {
         return $this->applyPeriod($this->query(Lead::class))
@@ -225,12 +211,12 @@ class MetricsService
     public function peakHours(): \Illuminate\Support\Collection
     {
         return $this->query(Conversation::class)
-            ->selectRaw('HOUR(created_at) as hour, count(*) as total')
+            ->selectRaw('EXTRACT(HOUR FROM created_at) as hour, count(*) as total')
             ->groupBy('hour')
             ->orderBy('hour')
             ->get()
             ->map(fn($row) => [
-                'hour'  => str_pad($row->hour, 2, '0', STR_PAD_LEFT) . 'h',
+                'hour'  => str_pad((int) $row->hour, 2, '0', STR_PAD_LEFT) . 'h',
                 'total' => $row->total,
             ]);
     }
@@ -280,7 +266,6 @@ class MetricsService
 
     public function leadsPerDay(): \Illuminate\Support\Collection
     {
-        // FIX: aplica o periodo selecionado para o grafico ser consistente com os demais cards
         return $this->applyPeriod($this->query(Lead::class))
             ->selectRaw('DATE(created_at) as date, count(*) as total')
             ->groupBy('date')
@@ -292,7 +277,7 @@ class MetricsService
     public function leadsPerMonth(): \Illuminate\Support\Collection
     {
         return $this->query(Lead::class)
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, count(*) as total")
+            ->selectRaw("TO_CHAR(created_at, 'YYYY-MM') as month, count(*) as total")
             ->groupBy('month')
             ->orderBy('month')
             ->limit(12)
