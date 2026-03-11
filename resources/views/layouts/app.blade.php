@@ -308,6 +308,11 @@
             <i data-lucide="bar-chart-2"></i> Relatórios
         </a>
         @endif
+        @if(auth()->user()->role === 'admin')
+        <a href="{{ route('admin.meta.embedded-signup.index') }}" class="nav-item {{ request()->routeIs('admin.meta.embedded-signup.*') ? 'active' : '' }}">
+            <i data-lucide="message-circle-more"></i> Meta / Embedded Signup
+        </a>
+        @endif
         <a href="{{ route('settings.index') }}" class="nav-item {{ request()->routeIs('settings*') ? 'active' : '' }}">
             <i data-lucide="settings"></i> Configurações
         </a>

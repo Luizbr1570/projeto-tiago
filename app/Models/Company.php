@@ -59,4 +59,14 @@ class Company extends Model
         {
             return $this->hasMany(\App\Models\ChatSession::class);
         }
+
+        public function metaEmbeddedSignupConfig()
+        {
+            return $this->hasOne(\App\Models\MetaEmbeddedSignupConfig::class);
+        }
+
+        public function metaEmbeddedSignupSessions()
+        {
+            return $this->hasMany(\App\Models\MetaEmbeddedSignupSession::class);
+        }
 }
