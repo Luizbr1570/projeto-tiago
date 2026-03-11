@@ -1,26 +1,35 @@
-FROM php:8.2-cli
+FROM php:8.2-fpm-alpine
 
-WORKDIR /app
+WORKDIR /var/www/html
 
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip \
-    libpng-dev libonig-dev libxml2-dev \
-    libpq-dev \
-    && docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring
+RUN apk add --no-cache \
+    bash curl git zip unzip \
+    libpng-dev oniguruma-dev libxml2-dev \
+    postgresql-dev nginx supervisor
 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS
+
+RUN docker-php-ext-install \
+    pdo pdo_pgsql pgsql mbstring xml bcmath pcntl opcache
+
+RUN pecl install redis && docker-php-ext-enable redis
+
+COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 COPY . .
 
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-RUN php artisan config:cache || true
-RUN php artisan route:cache || true
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 storage bootstrap/cache
 
-EXPOSE 10000
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/supervisord.conf /etc/supervisord.conf
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-CMD php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan storage:link && \
-    php artisan migrate --force && \
-    php artisan serve --host=0.0.0.0 --port=10000
+RUN apk del .build-deps
+
+EXPOSE 80
+
+ENTRYPOINT ["/entrypoint.sh"]
