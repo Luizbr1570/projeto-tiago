@@ -76,4 +76,9 @@ class MetaEmbeddedSignupService
     {
         return config('services.meta.system_user_token');
     }
+
+    public function appSecret(): ?string
+    {
+        return config('services.meta.app_secret');
+    }
 }

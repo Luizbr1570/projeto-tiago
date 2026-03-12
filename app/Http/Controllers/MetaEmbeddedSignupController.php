@@ -43,6 +43,7 @@ class MetaEmbeddedSignupController extends Controller
             'config' => $config,
             'latestSession' => $latestSession,
             'connectedNumbers' => $connectedNumbers,
+            'metaAppSecretConfigured' => filled($this->embeddedSignupService->appSecret()),
             'metaSystemTokenConfigured' => filled($this->embeddedSignupService->systemUserToken()),
             'migrationRequired' => $migrationRequired,
         ]);

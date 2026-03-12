@@ -114,6 +114,7 @@
 
             <div class="meta-mini">
                 Callback atual: <strong>{{ $config->redirect_uri }}</strong><br>
+                App secret no backend: <strong>{{ $metaAppSecretConfigured ? 'configurado' : 'não configurado' }}</strong><br>
                 Token de sistema no backend: <strong>{{ $metaSystemTokenConfigured ? 'configurado' : 'não configurado' }}</strong>
             </div>
 
