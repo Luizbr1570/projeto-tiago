@@ -9,7 +9,7 @@ class MetaEmbeddedSignupPayloadMapper
 {
     public function map(array $payload): MetaEmbeddedSignupNormalizedData
     {
-        $eventType = $this->stringValue($payload, ['type', 'event', 'event_type']);
+        $eventType = $this->stringValue($payload, ['event', 'type', 'event_type']);
         $payloadData = $this->arrayValue($payload, ['data', 'payload', 'session_data']) ?? [];
         $setupInfo = $this->arrayValue($payloadData, ['setup_info', 'setupInfo', 'extras']);
         $code = $this->stringValue($payload, ['code']) ?? $this->stringValue($payloadData, ['code']);

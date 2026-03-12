@@ -38,6 +38,15 @@
     .meta-feedback.error { color:#ff6584; }
     .meta-feedback.success { color:#43e97b; }
     .meta-mini { font-size:11px; color:var(--muted); margin-top:8px; line-height:1.5; }
+    .meta-link {
+        display:block;
+        color:#8db0ff;
+        text-decoration:none;
+        word-break:break-all;
+        font-size:12px;
+        line-height:1.5;
+    }
+    .meta-link:hover { color:#bfd2ff; }
     .meta-table-actions button {
         background:transparent; border:1px solid var(--border); color:var(--text); border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px;
     }
@@ -50,7 +59,7 @@
 
 <div class="page-header">
     <h1>Meta / Embedded Signup</h1>
-    <p>Configure o Facebook SDK, acompanhe o callback e persista os retornos do WhatsApp Embedded Signup.</p>
+    <p>Fluxo configurado no backend com WhatsApp Business App Onboarding, sem edição inline das variáveis sensíveis.</p>
 </div>
 
 @if($migrationRequired)
@@ -62,44 +71,41 @@
 <div class="meta-grid" id="metaEmbeddedSignupApp"
      data-latest-endpoint="{{ route('api.meta.embedded-signup.latest') }}"
      data-session-endpoint="{{ route('api.meta.embedded-signup.session.store') }}"
+     data-exchange-endpoint="{{ route('api.meta.embedded-signup.exchange-code') }}"
      data-sessions-endpoint="{{ route('api.meta.embedded-signup.sessions') }}"
      data-migration-required="{{ $migrationRequired ? '1' : '0' }}">
 
     <section class="card meta-col-4">
-        <div class="meta-card-title">Configuração</div>
-        <div class="meta-card-subtitle">Parâmetros usados para carregar o SDK e iniciar a conexão com a Meta.</div>
+        <div class="meta-card-title">Configuração do backend</div>
+        <div class="meta-card-subtitle">Os parâmetros do onboarding vêm do backend e não são editados nesta tela.</div>
 
-        <form method="POST" action="{{ route('admin.meta.embedded-signup.config.save') }}" class="meta-stack">
-            @csrf
+        <div class="meta-stack">
             <div>
-                <label>Facebook App ID</label>
-                <input class="input" type="text" name="facebook_app_id" value="{{ old('facebook_app_id', $config->facebook_app_id) }}" @if(!$migrationRequired) required @endif>
+                <span class="meta-inline-label">App ID</span>
+                <div class="meta-inline-value">{{ $config->facebook_app_id }}</div>
             </div>
             <div>
-                <label>Graph API Version</label>
-                <input class="input" type="text" name="graph_api_version" value="{{ old('graph_api_version', $config->graph_api_version ?: 'v25.0') }}" @if(!$migrationRequired) required @endif>
+                <span class="meta-inline-label">Configuration ID</span>
+                <div class="meta-inline-value">{{ $config->configuration_id }}</div>
             </div>
             <div>
-                <label>Config ID / Configuration ID</label>
-                <input class="input" type="text" name="configuration_id" value="{{ old('configuration_id', $config->configuration_id) }}" @if(!$migrationRequired) required @endif>
+                <span class="meta-inline-label">Graph API Version</span>
+                <div class="meta-inline-value">{{ $config->graph_api_version }}</div>
             </div>
             <div>
-                <label>Redirect URI / Callback URL</label>
-                <input class="input" type="url" name="redirect_uri" value="{{ old('redirect_uri', $config->redirect_uri) }}" @if(!$migrationRequired) required @endif>
+                <span class="meta-inline-label">Callback URL</span>
+                <div class="meta-inline-value">{{ $config->redirect_uri }}</div>
             </div>
-            <div>
-                <label>Status da integração</label>
-                <input class="input" type="text" name="integration_status" value="{{ old('integration_status', $config->integration_status) }}" placeholder="Opcional">
+            <div class="meta-mini">
+                App secret: <strong>{{ $metaAppSecretConfigured ? 'configurado' : 'não configurado' }}</strong><br>
+                System user token: <strong>{{ $metaSystemTokenConfigured ? 'configurado' : 'não configurado' }}</strong>
             </div>
-            <button type="submit" class="btn btn-primary" style="justify-content:center;" @if($migrationRequired) disabled @endif>
-                <i data-lucide="save" style="width:14px;height:14px;"></i> Salvar configurações
-            </button>
-        </form>
+        </div>
     </section>
 
     <section class="card meta-col-4">
         <div class="meta-card-title">Conexão</div>
-        <div class="meta-card-subtitle">Inicialize o Facebook SDK e abra o fluxo Embedded Signup sem expor segredos no cliente.</div>
+        <div class="meta-card-subtitle">Fluxo oficial com <code>whatsapp_business_app_onboarding</code> e coleta de <code>code</code>, <code>waba_id</code> e <code>phone_number_id</code>.</div>
 
         @php
             $status = $config->integration_status ?: 'not_configured';
@@ -112,18 +118,17 @@
                 <span id="metaIntegrationStatus">{{ $status }}</span>
             </div>
 
-            <div class="meta-mini">
-                Callback atual: <strong>{{ $config->redirect_uri }}</strong><br>
-                App secret no backend: <strong>{{ $metaAppSecretConfigured ? 'configurado' : 'não configurado' }}</strong><br>
-                Token de sistema no backend: <strong>{{ $metaSystemTokenConfigured ? 'configurado' : 'não configurado' }}</strong>
+            <div>
+                <span class="meta-inline-label">Link gerado</span>
+                <a class="meta-link" href="{{ $launchUrl }}" target="_blank" rel="noopener noreferrer">{{ $launchUrl }}</a>
             </div>
 
             <div class="meta-actions">
                 <button type="button" class="btn btn-primary" id="startEmbeddedSignupBtn" @if($migrationRequired) disabled @endif>
-                    <i data-lucide="plug-zap" style="width:14px;height:14px;"></i> Iniciar conexão com Facebook
+                    <i data-lucide="plug-zap" style="width:14px;height:14px;"></i> Login with Facebook
                 </button>
-                <a href="{{ route('admin.meta.embedded-signup.callback') }}" class="btn btn-ghost">
-                    <i data-lucide="arrow-up-right" style="width:14px;height:14px;"></i> Abrir callback
+                <a href="{{ $launchUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">
+                    <i data-lucide="external-link" style="width:14px;height:14px;"></i> Abrir link direto
                 </a>
             </div>
 
@@ -133,7 +138,7 @@
 
     <section class="card meta-col-4">
         <div class="meta-card-title">Último retorno</div>
-        <div class="meta-card-subtitle">Resumo da última sessão persistida e atualização manual do estado salvo.</div>
+        <div class="meta-card-subtitle">Resumo do último evento ou troca de token persistida no backend.</div>
 
         <div class="meta-stack">
             <div>
@@ -169,7 +174,7 @@
     <section class="meta-col-6">
         @include('meta.embedded-signup.partials.payload-card', [
             'title' => 'Dados extraídos',
-            'subtitle' => 'Campos normalizados para uso futuro com Graph API e sincronização.',
+            'subtitle' => 'Inclui code, access token, WABA ID e Phone Number ID.',
             'payload' => $latestNormalizedPayload,
             'badge' => $latestSession?->connection_status,
         ])
@@ -178,12 +183,12 @@
     <section class="meta-col-12">
         <div class="meta-kv">
             <div class="card">
-                <span class="meta-inline-label">Payload em memória</span>
+                <span class="meta-inline-label">Session info response</span>
                 <pre class="json-block" id="livePayloadBlock">{{ json_encode($latestRawPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
             </div>
             <div class="card">
-                <span class="meta-inline-label">Erros / observações</span>
-                <pre class="json-block" id="integrationNotesBlock">{{ json_encode($config->last_error ?? ['message' => 'Sem erros registrados.'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
+                <span class="meta-inline-label">SDK response</span>
+                <pre class="json-block" id="sdkResponseBlock">{}</pre>
             </div>
         </div>
     </section>
@@ -239,13 +244,11 @@
         version: @json($config->graph_api_version ?: 'v25.0'),
         configurationId: @json($config->configuration_id),
         redirectUri: @json($config->redirect_uri),
+        launchUrl: @json($launchUrl),
+        onboardingExtras: @json($onboardingExtras),
     };
 
     window.fbAsyncInit = function () {
-        if (!window.metaEmbeddedSignupConfig.appId) {
-            return;
-        }
-
         FB.init({
             appId: window.metaEmbeddedSignupConfig.appId,
             autoLogAppEvents: true,
@@ -265,6 +268,7 @@
         script.src = 'https://connect.facebook.net/en_US/sdk.js';
         script.async = true;
         script.defer = true;
+        script.crossOrigin = 'anonymous';
         firstScript.parentNode.insertBefore(script, firstScript);
     }(document, 'script', 'facebook-jssdk'));
 
@@ -274,12 +278,14 @@
             return;
         }
 
+        const storageKey = 'meta_embedded_signup_session_data';
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const startButton = document.getElementById('startEmbeddedSignupBtn');
         const refreshButton = document.getElementById('refreshLatestBtn');
         const sdkFeedback = document.getElementById('sdkFeedback');
         const refreshFeedback = document.getElementById('refreshFeedback');
         const livePayloadBlock = document.getElementById('livePayloadBlock');
+        const sdkResponseBlock = document.getElementById('sdkResponseBlock');
         const integrationStatus = document.getElementById('metaIntegrationStatus');
         const latestReturnAt = document.getElementById('latestReturnAt');
         const latestReturnStatus = document.getElementById('latestReturnStatus');
@@ -299,6 +305,14 @@
         }
 
         const formatJson = (value) => JSON.stringify(value ?? {}, null, 2);
+        const storeSessionData = (value) => window.sessionStorage.setItem(storageKey, JSON.stringify(value ?? {}));
+        const readSessionData = () => {
+            try {
+                return JSON.parse(window.sessionStorage.getItem(storageKey) || '{}');
+            } catch {
+                return {};
+            }
+        };
 
         const postPayload = async (payload, source) => {
             const response = await fetch(root.dataset.sessionEndpoint, {
@@ -315,6 +329,29 @@
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
                 throw new Error(data.message || 'Falha ao persistir payload da Meta.');
+            }
+
+            return data;
+        };
+
+        const exchangeCode = async (code) => {
+            const response = await fetch(root.dataset.exchangeEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    code,
+                    session_data: readSessionData()
+                })
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.message || 'Falha ao trocar code por token.');
             }
 
             return data;
@@ -378,7 +415,7 @@
         const parseMetaMessage = (rawData) => typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
         window.addEventListener('message', async (event) => {
-            if (event.origin !== 'https://www.facebook.com') {
+            if (event.origin !== 'https://www.facebook.com' && event.origin !== 'https://web.facebook.com') {
                 return;
             }
 
@@ -389,46 +426,61 @@
                 }
 
                 livePayloadBlock.textContent = formatJson(data);
+
+                if (data.event === 'FINISH') {
+                    storeSessionData(data.data || {});
+                }
+
                 await postPayload(data, 'post_message');
                 await refreshLatest();
-                setFeedback(sdkFeedback, 'Payload WA_EMBEDDED_SIGNUP recebido e persistido.', 'success');
+
+                if (data.event === 'FINISH') {
+                    setFeedback(sdkFeedback, 'Onboarding concluído. IDs salvos localmente e no backend.', 'success');
+                } else if (data.event === 'CANCEL') {
+                    setFeedback(sdkFeedback, `Fluxo cancelado em ${data.data?.current_step || 'etapa desconhecida'}.`, 'error');
+                } else if (data.event === 'ERROR') {
+                    setFeedback(sdkFeedback, data.data?.error_message || 'Erro reportado pela Meta.', 'error');
+                }
             } catch (error) {
                 setFeedback(sdkFeedback, error.message || 'Falha ao processar evento da Meta.', 'error');
             }
         });
 
-        startButton?.addEventListener('click', () => {
+        const fbLoginCallback = async (response) => {
+            sdkResponseBlock.textContent = formatJson(response || {});
+
+            if (!response?.authResponse?.code) {
+                setFeedback(sdkFeedback, 'Fluxo encerrado sem code de autorização.', 'error');
+                return;
+            }
+
+            try {
+                await exchangeCode(response.authResponse.code);
+                await refreshLatest();
+                setFeedback(sdkFeedback, 'Code recebido e enviado ao backend para troca por token.', 'success');
+            } catch (error) {
+                setFeedback(sdkFeedback, error.message || 'Falha ao enviar code ao backend.', 'error');
+            }
+        };
+
+        const launchWhatsAppSignup = () => {
             setFeedback(sdkFeedback, '', '');
 
             if (!window.FB) {
-                setFeedback(sdkFeedback, 'SDK do Facebook ainda não carregou.', 'error');
+                setFeedback(sdkFeedback, 'SDK do Facebook ainda não carregou. Abrindo link direto como fallback.', 'error');
+                window.open(window.metaEmbeddedSignupConfig.launchUrl, '_blank', 'noopener,noreferrer');
                 return;
             }
 
-            if (!window.metaEmbeddedSignupConfig.appId || !window.metaEmbeddedSignupConfig.configurationId) {
-                setFeedback(sdkFeedback, 'Preencha App ID e Configuration ID antes de iniciar.', 'error');
-                return;
-            }
-
-            FB.login(function (response) {
-                livePayloadBlock.textContent = formatJson(response || {});
-                setFeedback(
-                    sdkFeedback,
-                    response?.authResponse ? 'Fluxo iniciado. Aguarde o callback ou eventos postMessage.' : 'Fluxo encerrado ou não autorizado.',
-                    response?.authResponse ? 'success' : 'error'
-                );
-            }, {
-                config_id: window.metaEmbeddedSignupConfig.configurationId,
+            FB.login(fbLoginCallback, {
+                config_id: '1666637874323961',
                 response_type: 'code',
                 override_default_response_type: true,
-                redirect_uri: window.metaEmbeddedSignupConfig.redirectUri,
-                extras: {
-                    feature: 'whatsapp_embedded_signup',
-                    sessionInfoVersion: 3
-                }
+                extras: window.metaEmbeddedSignupConfig.onboardingExtras
             });
-        });
+        };
 
+        startButton?.addEventListener('click', launchWhatsAppSignup);
         refreshButton?.addEventListener('click', refreshLatest);
 
         connectedNumbersTable?.addEventListener('click', (event) => {

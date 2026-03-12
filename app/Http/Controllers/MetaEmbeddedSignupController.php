@@ -43,6 +43,8 @@ class MetaEmbeddedSignupController extends Controller
             'config' => $config,
             'latestSession' => $latestSession,
             'connectedNumbers' => $connectedNumbers,
+            'launchUrl' => $this->embeddedSignupService->launchUrl($config->redirect_uri),
+            'onboardingExtras' => $this->embeddedSignupService->onboardingExtras(),
             'metaAppSecretConfigured' => filled($this->embeddedSignupService->appSecret()),
             'metaSystemTokenConfigured' => filled($this->embeddedSignupService->systemUserToken()),
             'migrationRequired' => $migrationRequired,
@@ -59,6 +61,8 @@ class MetaEmbeddedSignupController extends Controller
             'config' => $config,
             'latestSession' => $latestSession,
             'callbackQuery' => request()->query(),
+            'launchUrl' => $this->embeddedSignupService->launchUrl($config->redirect_uri),
+            'onboardingExtras' => $this->embeddedSignupService->onboardingExtras(),
             'migrationRequired' => $migrationRequired,
         ]);
     }
@@ -138,6 +142,49 @@ class MetaEmbeddedSignupController extends Controller
         }
     }
 
+    public function exchangeCode(Request $request): JsonResponse
+    {
+        if (!$this->metaTablesExist()) {
+            return response()->json([
+                'message' => 'As tabelas da integração Meta ainda não foram criadas. Execute php artisan migrate.',
+            ], 503);
+        }
+
+        $config = $this->getOrCreateConfig();
+
+        $validated = $request->validate([
+            'code' => 'required|string',
+            'session_data' => 'nullable|array',
+        ]);
+
+        if (!$this->embeddedSignupService->appSecret()) {
+            return response()->json([
+                'message' => 'META_APP_SECRET não está configurado no backend.',
+            ], 422);
+        }
+
+        try {
+            $tokenPayload = $this->embeddedSignupService->exchangeCodeForAccessToken(
+                $config,
+                $validated['code'],
+                $validated['session_data'] ?? []
+            );
+
+            return response()->json([
+                'message' => 'Code trocado por token com sucesso.',
+                'token_payload' => $tokenPayload,
+            ]);
+        } catch (Throwable $exception) {
+            $this->embeddedSignupService->markConfigError($config, 'Erro ao trocar code por token.', [
+                'exception' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Não foi possível trocar o code por token.',
+            ], 500);
+        }
+    }
+
     public function latest(): JsonResponse
     {
         if (!$this->metaTablesExist()) {
@@ -184,9 +231,9 @@ class MetaEmbeddedSignupController extends Controller
         if (!$this->metaConfigTableExists()) {
             return new MetaEmbeddedSignupConfig([
                 'company_id' => $user->company_id,
-                'facebook_app_id' => (string) (config('services.meta.app_id') ?? ''),
-                'graph_api_version' => config('services.meta.graph_api_version', 'v25.0'),
-                'configuration_id' => (string) (config('services.meta.configuration_id') ?? ''),
+                'facebook_app_id' => $this->embeddedSignupService->appId(),
+                'graph_api_version' => $this->embeddedSignupService->graphApiVersion(),
+                'configuration_id' => $this->embeddedSignupService->configurationId(),
                 'redirect_uri' => config('services.meta.redirect_uri') ?: route('admin.meta.embedded-signup.callback'),
                 'integration_status' => 'migration_required',
             ]);
@@ -195,9 +242,9 @@ class MetaEmbeddedSignupController extends Controller
         return MetaEmbeddedSignupConfig::firstOrCreate(
             ['company_id' => $user->company_id],
             [
-                'facebook_app_id' => (string) (config('services.meta.app_id') ?? ''),
-                'graph_api_version' => config('services.meta.graph_api_version', 'v25.0'),
-                'configuration_id' => (string) (config('services.meta.configuration_id') ?? ''),
+                'facebook_app_id' => $this->embeddedSignupService->appId(),
+                'graph_api_version' => $this->embeddedSignupService->graphApiVersion(),
+                'configuration_id' => $this->embeddedSignupService->configurationId(),
                 'redirect_uri' => config('services.meta.redirect_uri') ?: route('admin.meta.embedded-signup.callback'),
                 'integration_status' => 'not_configured',
             ]

@@ -16,7 +16,6 @@ use App\Http\Controllers\ProductInterestController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
-// Rotas públicas
 Route::middleware('guest')->group(function () {
     Route::get('/login', fn () => view('auth.login'))->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('auth.login');
@@ -25,29 +24,20 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,60')->name('auth.register');
 });
 
-// Logout
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-// Rotas protegidas — todos os usuários autenticados
 Route::middleware(['auth', 'company.active'])->group(function () {
-
-    // FIX B02 (parcial): redirect da raiz para o dashboard
     Route::get('/', fn () => redirect()->route('dashboard'));
 
-    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // Funil
     Route::get('/funnel', [FunnelController::class, 'index'])->name('funnel.index');
 
-    // Configurações — perfil e senha acessíveis a qualquer role autenticado
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::patch('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
     Route::patch('/settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
 
-    // Leads — admin e agent
     Route::middleware('role:admin,agent')->group(function () {
         Route::resource('leads', LeadController::class);
         Route::resource('conversations', ConversationController::class)
@@ -58,15 +48,8 @@ Route::middleware(['auth', 'company.active'])->group(function () {
         Route::patch('/chat-sessions/{id}/close', [ChatSessionController::class, 'close'])->name('chat-sessions.close');
     });
 
-    // Rotas só para admin
     Route::middleware('role:admin')->group(function () {
-
-        // FIX B02: export movido para dentro do grupo admin
-        // Antes estava no grupo geral — qualquer autenticado podia exportar leads
         Route::get('/export/leads', [ExportController::class, 'leads'])->middleware('throttle:10,60')->name('export.leads');
-
-        // FIX B02 (parcial): settings.company restrito a admin
-        // Antes qualquer role podia alterar o nome da empresa
         Route::patch('/settings/company', [SettingsController::class, 'updateCompany'])->name('settings.company');
 
         Route::resource('products', ProductController::class)
@@ -96,6 +79,7 @@ Route::middleware(['auth', 'company.active'])->group(function () {
 
         Route::prefix('/api/meta/embedded-signup')->name('api.meta.embedded-signup.')->group(function () {
             Route::post('/session', [MetaEmbeddedSignupController::class, 'storeSession'])->name('session.store');
+            Route::post('/exchange-code', [MetaEmbeddedSignupController::class, 'exchangeCode'])->name('exchange-code');
             Route::get('/latest', [MetaEmbeddedSignupController::class, 'latest'])->name('latest');
             Route::get('/sessions', [MetaEmbeddedSignupController::class, 'sessions'])->name('sessions');
         });
