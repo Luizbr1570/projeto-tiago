@@ -6,6 +6,7 @@ use App\DataTransferObjects\MetaEmbeddedSignupEventData;
 use App\Models\MetaEmbeddedSignupConfig;
 use App\Models\MetaEmbeddedSignupSession;
 use App\Services\Meta\MetaEmbeddedSignupService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,10 +27,10 @@ class MetaEmbeddedSignupController extends Controller
     {
         $migrationRequired = !$this->metaTablesExist();
         $config = $this->getOrCreateConfig();
-        $latestSession = $migrationRequired ? null : MetaEmbeddedSignupSession::latest('created_at')->first();
+        $latestSession = $migrationRequired ? null : $this->sessionQuery()->latest('created_at')->first();
         $connectedNumbers = $migrationRequired
             ? new Collection()
-            : MetaEmbeddedSignupSession::query()
+            : $this->sessionQuery()
                 ->where(function ($query) {
                     $query->whereNotNull('phone_number_id')
                         ->orWhereNotNull('waba_id')
@@ -55,7 +56,7 @@ class MetaEmbeddedSignupController extends Controller
     {
         $migrationRequired = !$this->metaTablesExist();
         $config = $this->getOrCreateConfig();
-        $latestSession = $migrationRequired ? null : MetaEmbeddedSignupSession::latest('created_at')->first();
+        $latestSession = $migrationRequired ? null : $this->sessionQuery()->latest('created_at')->first();
 
         return view('meta.embedded-signup.callback', [
             'config' => $config,
@@ -124,7 +125,7 @@ class MetaEmbeddedSignupController extends Controller
 
             return response()->json([
                 'message' => 'Payload salvo com sucesso.',
-                'session' => $this->serializeSession($session->fresh()),
+                'session' => $this->serializeSessionSummary($session->fresh()),
             ], 201);
         } catch (Throwable $exception) {
             $this->embeddedSignupService->markConfigError($config, 'Erro ao persistir retorno da Meta.', [
@@ -164,7 +165,7 @@ class MetaEmbeddedSignupController extends Controller
         }
 
         try {
-            $tokenPayload = $this->embeddedSignupService->exchangeCodeForAccessToken(
+            $this->embeddedSignupService->exchangeCodeForAccessToken(
                 $config,
                 $validated['code'],
                 $validated['session_data'] ?? []
@@ -172,7 +173,9 @@ class MetaEmbeddedSignupController extends Controller
 
             return response()->json([
                 'message' => 'Code trocado por token com sucesso.',
-                'token_payload' => $tokenPayload,
+                'session' => $this->serializeSessionSummary(
+                    $this->sessionQuery()->latest('created_at')->first()
+                ),
             ]);
         } catch (Throwable $exception) {
             $this->embeddedSignupService->markConfigError($config, 'Erro ao trocar code por token.', [
@@ -196,11 +199,11 @@ class MetaEmbeddedSignupController extends Controller
             ]);
         }
 
-        $session = MetaEmbeddedSignupSession::latest('created_at')->first();
+        $session = $this->sessionQuery()->latest('created_at')->first();
 
         return response()->json([
             'config' => $this->serializeConfig($this->getOrCreateConfig()),
-            'latest' => $session ? $this->serializeSession($session) : null,
+            'latest' => $session ? $this->serializeSessionSummary($session) : null,
         ]);
     }
 
@@ -214,10 +217,11 @@ class MetaEmbeddedSignupController extends Controller
             ]);
         }
 
-        $sessions = MetaEmbeddedSignupSession::latest('created_at')
+        $sessions = $this->sessionQuery()
+            ->latest('created_at')
             ->limit(20)
             ->get()
-            ->map(fn (MetaEmbeddedSignupSession $session) => $this->serializeSession($session));
+            ->map(fn (MetaEmbeddedSignupSession $session) => $this->serializeSessionSummary($session));
 
         return response()->json([
             'data' => $sessions,
@@ -266,7 +270,7 @@ class MetaEmbeddedSignupController extends Controller
         ];
     }
 
-    private function serializeSession(MetaEmbeddedSignupSession $session): array
+    private function serializeSessionSummary(MetaEmbeddedSignupSession $session): array
     {
         return [
             'id' => $session->id,
@@ -277,11 +281,7 @@ class MetaEmbeddedSignupController extends Controller
             'phone_number_id' => $session->phone_number_id,
             'business_id' => $session->business_id,
             'display_name' => $session->display_name,
-            'code' => $session->code,
-            'access_token' => $session->access_token,
             'setup_info' => $session->setup_info,
-            'raw_payload' => $session->raw_payload,
-            'normalized_payload' => $session->normalized_payload,
             'meta_timestamp' => $session->meta_timestamp?->toIso8601String(),
             'created_at' => $session->created_at?->toIso8601String(),
         ];
@@ -295,5 +295,11 @@ class MetaEmbeddedSignupController extends Controller
     private function metaConfigTableExists(): bool
     {
         return Schema::hasTable('meta_embedded_signup_configs');
+    }
+
+    private function sessionQuery(): Builder
+    {
+        return MetaEmbeddedSignupSession::query()
+            ->where('company_id', Auth::user()->company_id);
     }
 }

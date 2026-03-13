@@ -293,7 +293,7 @@
             <i data-lucide="bar-chart-2"></i> Relatórios
         </a>
         <a href="{{ route('admin.meta.embedded-signup.index') }}" class="nav-item {{ request()->routeIs('admin.meta.embedded-signup.*') ? 'active' : '' }}">
-            <i data-lucide="message-circle-more"></i> Meta / Embedded Signup
+            <i data-lucide="message-circle-more"></i> Login Meta
         </a>
         @endif
         <a href="{{ route('settings.index') }}" class="nav-item {{ request()->routeIs('settings*') ? 'active' : '' }}">

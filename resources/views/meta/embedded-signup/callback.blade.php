@@ -1,23 +1,15 @@
 @extends('layouts.app')
-@section('title', 'Meta / Embedded Signup Callback')
-
-@php
-    $latestRawPayload = $latestSession?->raw_payload ?? [];
-    $latestNormalizedPayload = $latestSession?->normalized_payload ?? [];
-@endphp
+@section('title', 'Login Meta')
 
 @section('content')
 <style>
     .meta-grid { display:grid; grid-template-columns:repeat(12, minmax(0, 1fr)); gap:16px; }
     .meta-col-4 { grid-column:span 4; }
-    .meta-col-6 { grid-column:span 6; }
+    .meta-col-8 { grid-column:span 8; }
     .meta-col-12 { grid-column:span 12; }
     .meta-stack { display:grid; gap:14px; }
     .meta-card-title { font-size:15px; font-weight:700; margin-bottom:4px; }
     .meta-card-subtitle { font-size:12px; color:var(--muted); margin-bottom:18px; }
-    .meta-inline-label { display:block; font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em; }
-    .meta-inline-value { font-size:13px; font-weight:600; word-break:break-word; }
-    .meta-actions { display:flex; gap:10px; flex-wrap:wrap; }
     .meta-feedback { min-height:20px; font-size:12px; }
     .meta-feedback.error { color:#ff6584; }
     .meta-feedback.success { color:#43e97b; }
@@ -27,25 +19,37 @@
     }
     .meta-status[data-tone="warning"] { background:rgba(255,193,7,0.12); color:#ffc107; }
     .meta-status[data-tone="danger"] { background:rgba(255,101,132,0.12); color:#ff6584; }
-    .json-block {
-        background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px;
-        font-size:12px; line-height:1.55; color:#b8c3ff; max-height:360px; overflow:auto; white-space:pre-wrap; word-break:break-word;
+    .meta-summary {
+        display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;
     }
+    .meta-summary-item {
+        background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px;
+    }
+    .meta-inline-label {
+        display:block; font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;
+    }
+    .meta-inline-value { font-size:13px; font-weight:600; word-break:break-word; }
     @media (max-width: 1100px) {
-        .meta-col-4, .meta-col-6, .meta-col-12 { grid-column:span 12; }
+        .meta-col-4, .meta-col-8, .meta-col-12 { grid-column:span 12; }
+        .meta-summary { grid-template-columns:1fr; }
     }
 </style>
 
 <div class="page-header">
-    <h1>Callback do Embedded Signup</h1>
-    <p>Esta tela recebe o retorno visual do fluxo, mostra o payload bruto e envia o <code>code</code> para troca de token no backend.</p>
+    <h1>Login Meta</h1>
+    <p>Validando a conexao da conta para finalizar o login do WhatsApp Business.</p>
 </div>
 
 @if($migrationRequired)
     <div class="alert alert-error">
-        As tabelas da integração Meta ainda não existem neste banco. Execute <code>php artisan migrate</code> antes de usar esta área.
+        As tabelas da integracao Meta ainda nao existem neste banco. Execute <code>php artisan migrate</code> antes de usar esta area.
     </div>
 @endif
+
+@php
+    $status = $latestSession?->connection_status ?: ($config->integration_status ?: 'pending');
+    $tone = str_contains($status, 'error') ? 'danger' : (($status === 'pending' || $status === 'not_configured') ? 'warning' : 'success');
+@endphp
 
 <div class="meta-grid" id="metaEmbeddedSignupCallbackApp"
      data-exchange-endpoint="{{ route('api.meta.embedded-signup.exchange-code') }}"
@@ -53,106 +57,54 @@
      data-migration-required="{{ $migrationRequired ? '1' : '0' }}">
 
     <section class="card meta-col-4">
-        <div class="meta-card-title">Callback recebido</div>
-        <div class="meta-card-subtitle">Parâmetros atuais da URL de retorno.</div>
-        <div class="meta-stack">
-            <div>
-                <span class="meta-inline-label">Callback URL</span>
-                <div class="meta-inline-value">{{ $config->redirect_uri }}</div>
-            </div>
-            <div>
-                <span class="meta-inline-label">Code</span>
-                <div class="meta-inline-value" id="callbackCodeValue">{{ request('code', 'Não recebido') }}</div>
-            </div>
-            <div>
-                <span class="meta-inline-label">Estado</span>
-                <div class="meta-inline-value">{{ request('state', 'N/D') }}</div>
-            </div>
-            <div id="callbackFeedback" class="meta-feedback"></div>
-        </div>
-    </section>
+        <div class="meta-card-title">Status do login</div>
+        <div class="meta-card-subtitle">A pagina atualiza automaticamente quando a Meta concluir a validacao.</div>
 
-    <section class="card meta-col-4">
-        <div class="meta-card-title">Status atual</div>
-        <div class="meta-card-subtitle">Último retorno persistido para esta empresa.</div>
-        @php
-            $status = $latestSession?->connection_status ?: ($config->integration_status ?: 'pending');
-            $tone = str_contains($status, 'error') ? 'danger' : (($status === 'pending' || $status === 'not_configured') ? 'warning' : 'success');
-        @endphp
         <div class="meta-stack">
             <div class="meta-status" data-tone="{{ $tone }}">
                 <i data-lucide="badge-check" style="width:14px;height:14px;"></i>
                 <span id="callbackLatestStatus">{{ $status }}</span>
             </div>
-            <div>
-                <span class="meta-inline-label">Último evento</span>
-                <div class="meta-inline-value" id="callbackLatestEvent">{{ $latestSession?->event_type ?? 'N/D' }}</div>
-            </div>
-            <div>
-                <span class="meta-inline-label">Último retorno salvo</span>
-                <div class="meta-inline-value" id="callbackLatestAt">{{ $latestSession?->created_at?->format('d/m/Y H:i:s') ?? 'Nenhum retorno salvo' }}</div>
-            </div>
-            <div class="meta-actions">
-                <a href="{{ route('admin.meta.embedded-signup.index') }}" class="btn btn-ghost">
-                    <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Voltar
+
+            <div id="callbackFeedback" class="meta-feedback"></div>
+
+            <div class="meta-stack">
+                <a href="{{ route('admin.meta.embedded-signup.index') }}" class="btn btn-primary">
+                    <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Voltar para Login Meta
                 </a>
-                <button type="button" class="btn btn-primary" id="retryExchangeBtn" @if($migrationRequired || !request('code')) disabled @endif>
-                    <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Trocar code novamente
-                </button>
             </div>
         </div>
     </section>
 
-    <section class="card meta-col-4">
-        <div class="meta-card-title">Sessão local</div>
-        <div class="meta-card-subtitle">IDs recebidos via <code>postMessage</code> antes do redirect.</div>
-        <div class="meta-stack">
-            <div>
-                <span class="meta-inline-label">WABA ID</span>
-                <div class="meta-inline-value" id="storedWabaId">N/D</div>
+    <section class="card meta-col-8">
+        <div class="meta-card-title">Informacoes da conta</div>
+        <div class="meta-card-subtitle">Exibimos somente os dados principais retornados pelo login.</div>
+
+        <div class="meta-summary">
+            <div class="meta-summary-item">
+                <span class="meta-inline-label">Nome</span>
+                <div class="meta-inline-value" id="callbackDisplayName">{{ $latestSession?->display_name ?? 'Aguardando retorno' }}</div>
             </div>
-            <div>
-                <span class="meta-inline-label">Phone Number ID</span>
-                <div class="meta-inline-value" id="storedPhoneNumberId">N/D</div>
+            <div class="meta-summary-item">
+                <span class="meta-inline-label">Evento</span>
+                <div class="meta-inline-value" id="callbackLatestEvent">{{ $latestSession?->event_type ?? 'Aguardando retorno' }}</div>
             </div>
-            <div>
+            <div class="meta-summary-item">
+                <span class="meta-inline-label">WhatsApp Business ID</span>
+                <div class="meta-inline-value" id="callbackWabaId">{{ $latestSession?->waba_id ?? 'N/D' }}</div>
+            </div>
+            <div class="meta-summary-item">
+                <span class="meta-inline-label">Numero ID</span>
+                <div class="meta-inline-value" id="callbackPhoneNumberId">{{ $latestSession?->phone_number_id ?? 'N/D' }}</div>
+            </div>
+            <div class="meta-summary-item">
                 <span class="meta-inline-label">Business ID</span>
-                <div class="meta-inline-value" id="storedBusinessId">N/D</div>
+                <div class="meta-inline-value" id="callbackBusinessId">{{ $latestSession?->business_id ?? 'N/D' }}</div>
             </div>
-        </div>
-    </section>
-
-    <section class="meta-col-6">
-        @include('meta.embedded-signup.partials.payload-card', [
-            'title' => 'Query string do callback',
-            'subtitle' => 'Parâmetros brutos presentes na URL de retorno.',
-            'payload' => $callbackQuery,
-            'badge' => request('code') ? 'code_received' : 'no_code',
-        ])
-    </section>
-
-    <section class="meta-col-6">
-        @include('meta.embedded-signup.partials.payload-card', [
-            'title' => 'Último payload normalizado',
-            'subtitle' => 'Último retorno salvo e processado pelo backend.',
-            'payload' => $latestNormalizedPayload,
-            'badge' => $latestSession?->connection_status,
-        ])
-    </section>
-
-    <section class="meta-col-6">
-        <div class="card">
-            <div class="meta-card-title">Último payload bruto salvo</div>
-            <div class="meta-card-subtitle">Último evento persistido no backend.</div>
-            <pre class="json-block" id="latestRawPayloadBlock">{{ json_encode($latestRawPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
-        </div>
-    </section>
-
-    <section class="meta-col-6">
-        <div class="card">
-            <div class="meta-card-title">Resposta da troca de code</div>
-            <div class="meta-card-subtitle">Resultado do endpoint backend que troca <code>code</code> por token.</div>
-            <pre class="json-block" id="exchangeResponseBlock">{}</pre>
+            <div class="meta-summary-item">
+                <span class="meta-inline-label">Atualizado em</span>
+                <div class="meta-inline-value" id="callbackLatestAt">{{ $latestSession?->created_at?->format('d/m/Y H:i:s') ?? 'Aguardando retorno' }}</div>
+            </div>
         </div>
     </section>
 </div>
@@ -170,15 +122,13 @@
         const storageKey = 'meta_embedded_signup_session_data';
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const callbackFeedback = document.getElementById('callbackFeedback');
-        const exchangeResponseBlock = document.getElementById('exchangeResponseBlock');
-        const latestRawPayloadBlock = document.getElementById('latestRawPayloadBlock');
         const latestStatus = document.getElementById('callbackLatestStatus');
         const latestEvent = document.getElementById('callbackLatestEvent');
         const latestAt = document.getElementById('callbackLatestAt');
-        const retryExchangeBtn = document.getElementById('retryExchangeBtn');
-        const storedWabaId = document.getElementById('storedWabaId');
-        const storedPhoneNumberId = document.getElementById('storedPhoneNumberId');
-        const storedBusinessId = document.getElementById('storedBusinessId');
+        const displayName = document.getElementById('callbackDisplayName');
+        const wabaId = document.getElementById('callbackWabaId');
+        const phoneNumberId = document.getElementById('callbackPhoneNumberId');
+        const businessId = document.getElementById('callbackBusinessId');
         const query = new URLSearchParams(window.location.search);
         const callbackCode = query.get('code');
 
@@ -187,7 +137,6 @@
             callbackFeedback.className = `meta-feedback ${type}`.trim();
         };
 
-        const formatJson = (value) => JSON.stringify(value ?? {}, null, 2);
         const readSessionData = () => {
             try {
                 return JSON.parse(window.sessionStorage.getItem(storageKey) || '{}');
@@ -196,11 +145,14 @@
             }
         };
 
-        const populateStoredIds = () => {
-            const sessionData = readSessionData();
-            storedWabaId.textContent = sessionData.waba_id || 'N/D';
-            storedPhoneNumberId.textContent = sessionData.phone_number_id || 'N/D';
-            storedBusinessId.textContent = sessionData.business_id || 'N/D';
+        const syncLatestCard = (latest, config) => {
+            latestStatus.textContent = latest?.connection_status || config?.integration_status || 'N/D';
+            latestEvent.textContent = latest?.event_type || 'Aguardando retorno';
+            latestAt.textContent = latest?.created_at ? new Date(latest.created_at).toLocaleString('pt-BR') : 'Aguardando retorno';
+            displayName.textContent = latest?.display_name || 'Aguardando retorno';
+            wabaId.textContent = latest?.waba_id || 'N/D';
+            phoneNumberId.textContent = latest?.phone_number_id || 'N/D';
+            businessId.textContent = latest?.business_id || 'N/D';
         };
 
         const refreshLatest = async () => {
@@ -209,26 +161,22 @@
             });
 
             const data = await response.json().catch(() => ({}));
-            const latest = data.latest;
-            latestStatus.textContent = latest?.connection_status || data.config?.integration_status || 'N/D';
-            latestEvent.textContent = latest?.event_type || 'N/D';
-            latestAt.textContent = latest?.created_at ? new Date(latest.created_at).toLocaleString('pt-BR') : 'Nenhum retorno salvo';
-            latestRawPayloadBlock.textContent = formatJson(latest?.raw_payload || {});
+            syncLatestCard(data.latest, data.config);
         };
 
         const exchangeCode = async () => {
             if (migrationRequired) {
-                setFeedback('Execute php artisan migrate antes de usar esta área.', 'error');
+                setFeedback('Execute php artisan migrate antes de usar esta area.', 'error');
                 return;
             }
 
             if (!callbackCode) {
-                setFeedback('Nenhum code encontrado na URL do callback.', 'error');
+                await refreshLatest();
+                setFeedback('Aguardando o retorno do login Meta.', '');
                 return;
             }
 
-            setFeedback('Enviando code para troca no backend...', '');
-            exchangeResponseBlock.textContent = '{}';
+            setFeedback('Finalizando o login Meta...', '');
 
             const response = await fetch(root.dataset.exchangeEndpoint, {
                 method: 'POST',
@@ -245,33 +193,21 @@
             });
 
             const data = await response.json().catch(() => ({}));
-            exchangeResponseBlock.textContent = formatJson(data);
-
             if (!response.ok) {
-                throw new Error(data.message || 'Falha ao trocar code por token.');
+                throw new Error(data.message || 'Falha ao concluir o login Meta.');
             }
 
             await refreshLatest();
-            setFeedback('Code processado com sucesso no backend.', 'success');
+            setFeedback('Login Meta concluido com sucesso.', 'success');
         };
 
-        retryExchangeBtn?.addEventListener('click', async () => {
+        (async () => {
             try {
                 await exchangeCode();
             } catch (error) {
-                setFeedback(error.message || 'Falha ao processar callback.', 'error');
+                setFeedback(error.message || 'Falha ao validar o retorno da Meta.', 'error');
             }
-        });
-
-        populateStoredIds();
-
-        if (!migrationRequired && callbackCode) {
-            exchangeCode().catch((error) => {
-                setFeedback(error.message || 'Falha ao processar callback.', 'error');
-            });
-        } else if (!callbackCode) {
-            setFeedback('Abra esta URL a partir do fluxo do Embedded Signup para receber o code.', 'error');
-        }
+        })();
     })();
 </script>
 @endpush
