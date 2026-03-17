@@ -30,5 +30,11 @@ class MetricsCacheService
         foreach (['today', '7days', '30days'] as $period) {
             Cache::forget("dashboard_metrics_{$companyId}_{$period}");
         }
+        // Invalida também o cache de analytics de vendas
+        Cache::forget("sales_analytics_{$companyId}");
+        // Invalida o cache do funil de conversão
+        Cache::forget("funnel_data_{$companyId}");
+        // Invalida o cache de insights recentes do dashboard
+        Cache::forget("recent_insights_{$companyId}");
     }
 }

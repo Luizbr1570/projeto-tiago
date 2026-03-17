@@ -17,7 +17,15 @@ class Company extends Model
             'name',
             'slug',
             'plan',
-            'active'
+            'active',
+            'conversion_base',
+            'conversion_with_ai',
+        ];
+
+        protected $casts = [
+            'active'            => 'boolean',
+            'conversion_base'   => 'float',
+            'conversion_with_ai' => 'float',
         ];
 
         public function users()

@@ -24,6 +24,7 @@ return new class extends Migration
 
             $table->boolean('transferred_to_human')->default(false);
             $table->softDeletes();
+            $table->timestamps(); // ADICIONADO
 
             $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
 

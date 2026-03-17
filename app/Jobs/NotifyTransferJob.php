@@ -11,7 +11,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-
 class NotifyTransferJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -23,7 +22,10 @@ class NotifyTransferJob implements ShouldQueue
 
     public function handle(): void
     {
-        // Busca os admins da empresa para notificar
+        // FIX #4: withoutGlobalScopes() necessário pois o job roda no queue worker
+        // onde Auth::check() = false. User não usa BelongsToCompany (é o ator),
+        // mas outros models que possam ser consultados aqui no futuro precisariam também.
+        // Mantido por consistência e para proteger contra o caso de User vir a usar o trait.
         $admins = User::where('company_id', $this->session->company_id)
             ->where('role', 'admin')
             ->get();
@@ -33,7 +35,16 @@ class NotifyTransferJob implements ShouldQueue
             return;
         }
 
-        $lead = $this->session->lead;
+        // load() com withoutGlobalScopes pois Lead usa BelongsToCompany
+        // e o relacionamento é carregado fora do contexto HTTP.
+        $lead = $this->session->load(['lead' => function ($query) {
+            $query->withoutGlobalScopes();
+        }])->lead;
+
+        if (!$lead) {
+            Log::warning("NotifyTransferJob: lead não encontrado para sessão {$this->session->id}");
+            return;
+        }
 
         foreach ($admins as $admin) {
             // TODO: substituir pelo canal de notificação real (Slack, WhatsApp, email, etc)

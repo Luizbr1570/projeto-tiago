@@ -7,6 +7,8 @@ use App\Services\MetricsCacheService;
 use App\Services\MetricsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+
 
 class DashboardController extends Controller
 {
@@ -19,14 +21,18 @@ class DashboardController extends Controller
 
         $data = $cache->getDashboard();
 
-        // FIX B03: query de insights movida do template para o controller,
-        // com filtro explícito de company_id e ordenação por created_at (não por UUID)
-        $data['recent_insights'] = AiInsight::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->latest('created_at')
-            ->limit(4)
-            ->get();
+        // Insights em cache separado (5 min) para ser invalidado junto com
+        // as métricas pelo MetricsCacheService::invalidate(). Sem isso,
+        // insights novos gerados pelo job demoram até 5 min para aparecer.
+        $data['recent_insights'] = Cache::remember(
+            "recent_insights_{$companyId}",
+            now()->addMinutes(5),
+            fn () => AiInsight::where('company_id', $companyId)
+                ->latest('created_at')
+                ->limit(4)
+                ->get()
+        );
 
-        return view('dashboard.index', compact('data'));
+        return view('dashboard.index', compact('data', 'period'));
     }
 }

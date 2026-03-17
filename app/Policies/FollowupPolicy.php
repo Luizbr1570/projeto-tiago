@@ -26,4 +26,8 @@ class FollowupPolicy
     {
         return $user->company_id === $followup->company_id;
     }
+    public function restore(User $user, Followup $followup): bool
+    {
+        return $user->company_id === $followup->company_id;
+    }
 }

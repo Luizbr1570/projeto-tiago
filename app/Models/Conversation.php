@@ -33,4 +33,5 @@ class Conversation extends Model
             return $this->belongsTo(Lead::class);
         }
 
+
 }

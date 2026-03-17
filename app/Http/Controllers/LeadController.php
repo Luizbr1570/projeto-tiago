@@ -12,7 +12,7 @@ class LeadController extends Controller
     {
         $this->authorize('viewAny', Lead::class);
 
-        $query = Lead::latest();
+        $query = Lead::where('company_id', Auth::user()->company_id)->latest();
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -33,7 +33,11 @@ class LeadController extends Controller
         $this->authorize('create', Lead::class);
 
         $validado = $request->validate([
-            'phone'  => 'required|string',
+            'phone'  => [
+                'required',
+                'string',
+                \Illuminate\Validation\Rule::unique('leads')->where('company_id', Auth::user()->company_id),
+            ],
             'city'   => 'nullable|string',
             'source' => 'nullable|string'
         ]);
@@ -47,13 +51,19 @@ class LeadController extends Controller
 
     public function show(string $id)
     {
-        $lead = Lead::where('company_id', Auth::user()->company_id)
-            ->with(['conversations', 'productInterests.product'])
+        $lead = Lead::withTrashed()
+            ->where('company_id', Auth::user()->company_id)
+            ->with(['productInterests.product', 'sales'])
             ->findOrFail($id);
 
         $this->authorize('view', $lead);
 
-        return view('leads.show', compact('lead'));
+        // Paginado para não carregar centenas de mensagens de uma vez
+        $conversations = $lead->conversations()
+            ->orderBy('created_at', 'asc')
+            ->paginate(50);
+
+        return view('leads.show', compact('lead', 'conversations'));
     }
 
     public function update(Request $request, string $id)
@@ -82,5 +92,25 @@ class LeadController extends Controller
         \App\Services\MetricsCacheService::invalidate(Auth::user()->company_id);
 
         return back()->with('success', 'Lead removido');
+    }
+
+    public function restore(string $id)
+    {
+        $lead = Lead::withoutGlobalScopes()
+            ->onlyTrashed()
+            ->where('company_id', Auth::user()->company_id)
+            ->findOrFail($id);
+
+        $this->authorize('restore', $lead);
+
+        $lead->restore();
+
+        \App\Services\MetricsCacheService::invalidate(Auth::user()->company_id);
+
+        if (request()->expectsJson()) {
+            return response()->json(['message' => 'Lead restaurado']);
+        }
+
+        return back()->with('success', '✅ Lead restaurado com sucesso.');
     }
 }

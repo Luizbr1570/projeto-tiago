@@ -6,10 +6,11 @@ use App\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AiInsight extends Model
 {
-    use HasFactory, HasUuids, BelongsToCompany;
+    use HasFactory, HasUuids, BelongsToCompany, SoftDeletes;
 
     protected $keyType = 'string';
     public $incrementing = false;

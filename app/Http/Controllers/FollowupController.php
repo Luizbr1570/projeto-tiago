@@ -13,7 +13,9 @@ class FollowupController extends Controller
     {
         $this->authorize('viewAny', Followup::class);
 
-        $followups = Followup::with('lead')
+        $followups = Followup::where('company_id', Auth::user()->company_id)
+        
+            ->with('lead')
             ->latest('created_at')
             ->paginate(20);
 
@@ -74,5 +76,24 @@ class FollowupController extends Controller
         $followup->delete();
 
         return back()->with('success', '✅ Follow-up removido com sucesso.');
+    }
+    public function restore(string $id)
+    {
+        $followup = Followup::withoutGlobalScopes()
+            ->onlyTrashed()
+            ->where('company_id', Auth::user()->company_id)
+            ->findOrFail($id);
+    
+        $this->authorize('restore', $followup);
+    
+        $followup->restore();
+    
+        \App\Services\MetricsCacheService::invalidate(Auth::user()->company_id);
+    
+        if (request()->expectsJson()) {
+            return response()->json(['message' => 'Follow-up restaurado']);
+        }
+    
+        return back()->with('success', '✅ Follow-up restaurado com sucesso.');
     }
 }

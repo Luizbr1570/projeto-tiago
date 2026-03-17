@@ -7,7 +7,7 @@ use App\Models\Conversation;
 use App\Models\DailyMetric;
 use App\Models\Followup;
 use App\Models\Lead;
-use App\Models\ProductInterest;
+use App\Models\Product;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,26 +31,36 @@ class UpdateDailyMetricsJob implements ShouldQueue
         $companyId = $this->company->id;
         $date = $this->date;
 
-        $leads = Lead::where('company_id', $companyId)
+        // FIX: adicionado withoutGlobalScopes() em todas as queries.
+        // Este job roda no queue worker onde Auth::check() retorna false.
+        // O CompanyScope aplica whereRaw('1 = 0') quando não há usuário autenticado,
+        // fazendo todas as contagens retornarem 0 silenciosamente sem erros.
+        // withoutGlobalScopes() desativa o scope e o filtro manual de company_id
+        // garante o isolamento multi-tenant.
+        $leads = Lead::withoutGlobalScopes()
+            ->where('company_id', $companyId)
             ->whereDate('created_at', $date)
             ->count();
 
-        $conversations = Conversation::where('company_id', $companyId)
+        $conversations = Conversation::withoutGlobalScopes()
+            ->where('company_id', $companyId)
             ->whereDate('created_at', $date)
             ->count();
 
-        $recoveredLeads = Followup::where('company_id', $companyId)
+        $recoveredLeads = Followup::withoutGlobalScopes()
+            ->where('company_id', $companyId)
             ->where('status', 'recovered')
             ->whereDate('sent_at', $date)
             ->count();
 
         // Receita estimada: leads recuperados * ticket médio dos produtos
-        $ticketMedio = \App\Models\Product::where('company_id', $companyId)
+        $ticketMedio = Product::withoutGlobalScopes()
+            ->where('company_id', $companyId)
             ->avg('avg_price') ?? 0;
 
         $estimatedRevenue = round($recoveredLeads * $ticketMedio, 2);
 
-        DailyMetric::updateOrCreate(
+        DailyMetric::withoutGlobalScopes()->updateOrCreate(
             [
                 'company_id' => $companyId,
                 'date'       => $date,

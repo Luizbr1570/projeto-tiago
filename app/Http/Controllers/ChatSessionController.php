@@ -14,7 +14,8 @@ class ChatSessionController extends Controller
     {
         $this->authorize('viewAny', ChatSession::class);
 
-        $sessions = ChatSession::with('lead')
+        $sessions = ChatSession::where('company_id', Auth::user()->company_id)
+            ->with('lead')
             ->latest('started_at')
             ->paginate(20);
 
@@ -33,7 +34,11 @@ class ChatSessionController extends Controller
             ],
         ]);
 
-        $aberta = ChatSession::where('lead_id', $validado['lead_id'])
+        // FIX: adicionado where('company_id', ...) no check de sessão aberta.
+        // O lead_id já foi validado como pertencente à empresa, mas o check de
+        // duplicata também deve ser escopado por tenant para consistência defensiva.
+        $aberta = ChatSession::where('company_id', Auth::user()->company_id)
+            ->where('lead_id', $validado['lead_id'])
             ->whereNull('ended_at')
             ->exists();
 
@@ -42,6 +47,7 @@ class ChatSessionController extends Controller
         }
 
         ChatSession::create([
+            'company_id' => Auth::user()->company_id,
             'lead_id'    => $validado['lead_id'],
             'started_at' => now(),
         ]);

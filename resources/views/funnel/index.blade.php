@@ -8,7 +8,7 @@
 </div>
 
 {{-- Cards de resumo --}}
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+<div class="funil-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
     <div class="card">
         <div class="card-label">Total de leads</div>
         <div class="card-value">{{ number_format($total) }}</div>
@@ -29,7 +29,7 @@
     </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+<div class="funil-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
 
     {{-- Funil visual --}}
     <div class="card">
@@ -54,19 +54,19 @@
     </div>
 
     {{-- Gráfico de rosca --}}
-    <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div class="card funil-donut-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
         <div style="font-size:14px;font-weight:600;margin-bottom:20px;align-self:flex-start;">Proporção visual</div>
-        <div style="position:relative;width:200px;height:200px;">
+        <div style="position:relative;width:180px;height:180px;">
             <canvas id="funnelDonut"></canvas>
             <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-                <div style="font-size:28px;font-weight:700;">{{ $total }}</div>
+                <div style="font-size:26px;font-weight:700;">{{ $total }}</div>
                 <div style="font-size:11px;color:var(--muted);">leads</div>
             </div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;justify-content:center;">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;justify-content:center;">
             @foreach($funnel as $step)
             <div style="display:flex;align-items:center;gap:5px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:{{ $step['color'] }};"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:{{ $step['color'] }};flex-shrink:0;"></div>
                 <span style="font-size:11px;color:var(--muted);">{{ $step['label'] }}</span>
             </div>
             @endforeach
@@ -79,36 +79,74 @@
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
         <span style="font-size:14px;font-weight:600;">Detalhamento por status</span>
     </div>
-    <table>
-        <thead>
-            <tr>
-                <th>Status</th>
-                <th>Quantidade</th>
-                <th>% do total</th>
-                <th>Visualização</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($funnel as $step)
-            <tr>
-                <td>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <div style="width:8px;height:8px;border-radius:50%;background:{{ $step['color'] }};"></div>
-                        <span class="badge badge-{{ $step['status'] }}">{{ $step['label'] }}</span>
-                    </div>
-                </td>
-                <td style="font-weight:600;">{{ number_format($step['count']) }}</td>
-                <td style="color:var(--muted);">{{ $step['pct'] }}%</td>
-                <td style="width:200px;">
-                    <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
-                        <div style="height:100%;width:{{ $step['pct'] }}%;background:{{ $step['color'] }};border-radius:4px;"></div>
-                    </div>
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+
+    {{-- Tabela — desktop --}}
+    <div class="funil-table-desktop" style="overflow-x:auto;">
+        <table style="min-width:480px;">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Quantidade</th>
+                    <th>% do total</th>
+                    <th>Visualização</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($funnel as $step)
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:8px;height:8px;border-radius:50%;background:{{ $step['color'] }};"></div>
+                            <span class="badge badge-{{ $step['status'] }}">{{ $step['label'] }}</span>
+                        </div>
+                    </td>
+                    <td style="font-weight:600;">{{ number_format($step['count']) }}</td>
+                    <td style="color:var(--muted);">{{ $step['pct'] }}%</td>
+                    <td style="width:180px;">
+                        <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="height:100%;width:{{ $step['pct'] }}%;background:{{ $step['color'] }};border-radius:4px;"></div>
+                        </div>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    {{-- Cards — mobile (substitui tabela) --}}
+    <div class="funil-table-mobile" style="display:none;padding:12px;gap:8px;flex-direction:column;">
+        @foreach($funnel as $step)
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:{{ $step['color'] }}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div style="width:10px;height:10px;border-radius:50%;background:{{ $step['color'] }};"></div>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;margin-bottom:6px;">{{ $step['label'] }}</div>
+                <div style="background:var(--surface);border-radius:4px;height:6px;overflow:hidden;">
+                    <div style="height:100%;width:{{ $step['pct'] }}%;background:{{ $step['color'] }};border-radius:4px;"></div>
+                </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:16px;font-weight:700;">{{ number_format($step['count']) }}</div>
+                <div style="font-size:11px;color:var(--muted);">{{ $step['pct'] }}%</div>
+            </div>
+        </div>
+        @endforeach
+    </div>
 </div>
+
+<style>
+@media (max-width: 768px) {
+    .funil-cards         { grid-template-columns: repeat(2,1fr) !important; }
+    .funil-grid          { grid-template-columns: 1fr !important; }
+    .funil-table-desktop { display: none !important; }
+    .funil-table-mobile  { display: flex !important; }
+}
+@media (max-width: 480px) {
+    .funil-cards  { grid-template-columns: 1fr 1fr !important; }
+    .card-value   { font-size: 22px !important; }
+}
+</style>
 
 @endsection
 

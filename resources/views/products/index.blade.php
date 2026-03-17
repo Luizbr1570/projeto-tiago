@@ -8,7 +8,7 @@
 </div>
 
 {{-- ── Produtos mais buscados + Ticket médio ── --}}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+<div class="prod-grid-top" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
 
     {{-- Barra horizontal --}}
     <div class="card">
@@ -82,7 +82,7 @@
             </thead>
             <tbody>
                 @forelse($products as $product)
-                <tr style="border-bottom:1px solid var(--border);transition:background 0.2s;"
+                <tr data-removable style="border-bottom:1px solid var(--border);transition:background 0.2s;"
                     onmouseover="this.style.background='var(--surface2)'"
                     onmouseout="this.style.background='transparent'">
                     <td style="padding:12px;">
@@ -96,15 +96,14 @@
                     <td style="padding:12px;text-align:center;font-weight:600;">{{ $product->interests_count ?? 0 }}</td>
                     <td style="padding:12px;text-align:right;color:var(--accent);font-weight:600;">R$ {{ number_format($product->avg_price ?? 0, 2, ',', '.') }}</td>
                     <td style="padding:12px;text-align:center;">
-                        <form method="POST" action="{{ route('products.destroy', $product->id) }}" 
-                              onsubmit="return confirm('Tem certeza que deseja remover este produto?');"
-                              style="display:inline;">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="btn btn-danger" style="padding:6px 10px;font-size:11px;"
-                                    title="Remover produto">
-                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                            </button>
-                        </form>
+                        <button type="button"
+                            class="btn btn-danger"
+                            style="padding:6px 10px;font-size:11px;"
+                            title="Remover produto"
+                            data-delete-url="{{ route('products.destroy', $product->id) }}"
+                            onclick="confirmDelete(this,'Produto','{{ route('products.destroy', $product->id) }}','{{ route('products.restore', $product->id) }}')">
+                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                        </button>
                     </td>
                 </tr>
                 @empty
@@ -132,19 +131,16 @@
             @csrf
             <div style="margin-bottom:16px;">
                 <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;text-transform:uppercase;color:var(--muted);">Nome do produto *</label>
-                <input type="text" name="name" class="input" placeholder="iPhone 15 Pro Max" required
-                       style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:13px;">
+                <input type="text" name="name" class="input" placeholder="iPhone 15 Pro Max" required>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div class="modal-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
                 <div>
                     <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;text-transform:uppercase;color:var(--muted);">Categoria</label>
-                    <input type="text" name="category" class="input" placeholder="Smartphone"
-                           style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:13px;">
+                    <input type="text" name="category" class="input" placeholder="Smartphone">
                 </div>
                 <div>
                     <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;text-transform:uppercase;color:var(--muted);">Preço médio (R$)</label>
-                    <input type="number" name="avg_price" class="input" placeholder="6420" step="0.01"
-                           style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:13px;">
+                    <input type="number" name="avg_price" class="input" placeholder="6420" step="0.01">
                 </div>
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:13px;font-weight:600;border-radius:6px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
@@ -155,39 +151,10 @@
 </div>
 
 <style>
-.input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface2);
-    color: var(--text);
-    font-size: 13px;
-    transition: all 0.2s;
-}
-
-.input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(168,85,247,0.1);
-}
-
-.btn {
-    transition: all 0.2s ease;
-}
-
-.btn:hover {
-    transform: translateY(-1px);
-}
-
-.btn:active {
-    transform: scale(0.98);
-}
-
 @media (max-width: 768px) {
-    #modal-product {
-        padding: 16px !important;
-    }
+    .prod-grid-top { grid-template-columns: 1fr !important; }
+    .modal-row     { grid-template-columns: 1fr !important; }
+    #modal-product { padding: 12px !important; }
 }
 </style>
 

@@ -34,4 +34,8 @@ class LeadPolicy
     {
         return $user->company_id === $lead->company_id;
     }
+    public function restore(User $user, Lead $lead): bool
+    {
+        return $user->company_id === $lead->company_id;
+    }
 }

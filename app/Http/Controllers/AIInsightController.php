@@ -38,4 +38,21 @@ class AIInsightController extends Controller
 
         return back()->with('success', 'Insight removido');
     }
+    public function restore(string $id)
+    {
+        $insight = AiInsight::withoutGlobalScopes()
+            ->onlyTrashed()
+            ->where('company_id', Auth::user()->company_id)
+            ->findOrFail($id);
+
+        $this->authorize('restore', $insight);
+
+        $insight->restore();
+
+        if (request()->expectsJson()) {
+            return response()->json(['message' => 'Insight restaurado']);
+        }
+
+        return back()->with('success', '✅ Insight restaurado.');
+    }
 }

@@ -13,7 +13,11 @@ class ConversationController extends Controller
     {
         $this->authorize('viewAny', Conversation::class);
 
-        $query = Conversation::with(['lead', 'company'])
+        // FIX #1: adicionado where company_id para garantir isolamento multi-tenant.
+        // Sem esse filtro, o CompanyScope é a única barreira — se o model não usar
+        // BelongsToCompany, todas as conversas de todos os tenants seriam expostas.
+        $query = Conversation::where('company_id', Auth::user()->company_id)
+            ->with('lead')
             ->latest('created_at');
 
         if ($request->filled('search')) {
@@ -37,7 +41,7 @@ class ConversationController extends Controller
     public function show(string $id)
     {
         $conversation = Conversation::where('company_id', Auth::user()->company_id)
-            ->with(['lead', 'company'])
+            ->with('lead')
             ->findOrFail($id);
 
         $this->authorize('view', $conversation);
@@ -83,5 +87,22 @@ class ConversationController extends Controller
             return redirect(route('conversations.index'))
                 ->with('error', '❌ Erro ao remover conversa. Tente novamente.');
         }
+    }
+    public function restore(string $id)
+    {
+        $conversation = Conversation::withoutGlobalScopes()
+            ->onlyTrashed()
+            ->where('company_id', Auth::user()->company_id)
+            ->findOrFail($id);
+        
+            $this->authorize('restore', $conversation);
+        
+            $conversation->restore();
+        
+            if (request()->expectsJson()) {
+                return response()->json(['message' => 'Conversa restaurada']);
+            }
+        
+            return back()->with('success', '✅ Conversa restaurada com sucesso.');
     }
 }

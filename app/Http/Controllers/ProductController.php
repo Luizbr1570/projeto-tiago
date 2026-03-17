@@ -12,8 +12,9 @@ class ProductController extends Controller
     {
         $this->authorize('viewAny', Product::class);
 
-        $products = Product::withCount('interests')
-            ->orderByDesc('id')
+        $products = Product::where('company_id', Auth::user()->company_id)
+            ->withCount('interests')
+            ->orderByDesc('created_at')
             ->paginate(20);
 
         return view('products.index', compact('products'));
@@ -28,6 +29,11 @@ class ProductController extends Controller
             'category'  => 'nullable|string|max:255',
             'avg_price' => 'nullable|numeric|min:0'
         ]);
+
+        // FIX #2: company_id injetado explicitamente antes do create.
+        // O BelongsToCompany trait injeta via evento creating(), mas depende
+        // de Auth::check() — injeção explícita é mais segura e legível.
+        $validado['company_id'] = Auth::user()->company_id;
 
         Product::create($validado);
 
@@ -59,5 +65,22 @@ class ProductController extends Controller
 
         return redirect(route('products.index'))
             ->with('success', '✅ Produto removido com sucesso.');
+    }
+    public function restore(string $id)
+    {
+        $product = Product::withoutGlobalScopes()
+            ->onlyTrashed()
+            ->where('company_id', Auth::user()->company_id)
+            ->findOrFail($id);
+    
+        $this->authorize('restore', $product);
+    
+        $product->restore();
+    
+        if (request()->expectsJson()) {
+            return response()->json(['message' => 'Produto restaurado']);
+        }
+    
+        return back()->with('success', '✅ Produto restaurado com sucesso.');
     }
 }

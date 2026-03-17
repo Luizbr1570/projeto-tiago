@@ -13,7 +13,9 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\MetaEmbeddedSignupController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductInterestController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -46,6 +48,7 @@ Route::middleware(['auth', 'company.active'])->group(function () {
         Route::post('/chat-sessions', [ChatSessionController::class, 'store'])->name('chat-sessions.store');
         Route::patch('/chat-sessions/{id}/transfer', [ChatSessionController::class, 'transfer'])->name('chat-sessions.transfer');
         Route::patch('/chat-sessions/{id}/close', [ChatSessionController::class, 'close'])->name('chat-sessions.close');
+        Route::post('/leads/{id}/restore', [LeadController::class, 'restore'])->name('leads.restore');
     });
 
     Route::middleware('role:admin')->group(function () {
@@ -83,5 +86,26 @@ Route::middleware(['auth', 'company.active'])->group(function () {
             Route::get('/latest', [MetaEmbeddedSignupController::class, 'latest'])->name('latest');
             Route::get('/sessions', [MetaEmbeddedSignupController::class, 'sessions'])->name('sessions');
         });
+
+        Route::post('/products/{id}/restore',      [ProductController::class,      'restore'])->name('products.restore');
+        Route::post('/conversations/{id}/restore', [ConversationController::class,  'restore'])->name('conversations.restore');
+        Route::post('/followups/{id}/restore',     [FollowupController::class,      'restore'])->name('followups.restore');
+
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::patch('/users/{id}', [UserController::class, 'update'])->name('users.update');
+        Route::patch('/users/{id}/password', [UserController::class, 'resetPassword'])->name('users.password');
+        Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::post('/users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
+
+        Route::post('/insights/{id}/restore', [AIInsightController::class, 'restore'])->name('insights.restore');
+
+        // Vendas
+        Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
+        Route::get('/sales/export', [SaleController::class, 'export'])->middleware('throttle:10,60')->name('sales.export');
+        Route::post('/leads/{lead}/sales', [SaleController::class, 'store'])->middleware('throttle:30,1')->name('sales.store');
+        Route::patch('/sales/{sale}', [SaleController::class, 'update'])->middleware('throttle:30,1')->name('sales.update');
+        Route::delete('/sales/{sale}', [SaleController::class, 'destroy'])->middleware('throttle:30,1')->name('sales.destroy');
+        Route::post('/sales/{sale}/restore', [SaleController::class, 'restore'])->middleware('throttle:30,1')->name('sales.restore');
     });
 });

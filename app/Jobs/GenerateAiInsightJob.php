@@ -23,8 +23,11 @@ class GenerateAiInsightJob implements ShouldQueue
 
     public function handle(): void
     {
-        // Pega as últimas 50 mensagens da empresa para análise
-        $conversations = Conversation::where('company_id', $this->company->id)
+        // FIX #3: withoutGlobalScopes() necessário porque jobs rodam no queue worker,
+        // onde Auth::check() retorna false. Sem isso, o CompanyScope aplica
+        // whereRaw('1 = 0') e a query retorna vazio silenciosamente.
+        $conversations = Conversation::withoutGlobalScopes()
+            ->where('company_id', $this->company->id)
             ->latest()
             ->limit(50)
             ->pluck('message')
@@ -41,7 +44,10 @@ class GenerateAiInsightJob implements ShouldQueue
 
         $insight = "Insight gerado automaticamente em " . now()->toDateTimeString();
 
-        AiInsight::create([
+        // AiInsight também usa BelongsToCompany — withoutGlobalScopes() no create
+        // não é necessário pois o evento creating() verifica Auth::check() antes
+        // de injetar, e o company_id é passado explicitamente aqui.
+        AiInsight::withoutGlobalScopes()->create([
             'company_id' => $this->company->id,
             'insight'    => $insight,
         ]);

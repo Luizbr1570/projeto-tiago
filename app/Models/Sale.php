@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ChatSession extends Model
+class Sale extends Model
 {
     use SoftDeletes, HasFactory, HasUuids, BelongsToCompany;
 
@@ -16,26 +16,26 @@ class ChatSession extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'company_id',
-        'lead_id',
-        'started_at',
-        'ended_at',
-        'transferred_to_human',
+        'company_id', 'lead_id', 'product_id', 'value', 'notes', 'sold_at',
     ];
 
     protected $casts = [
-        'started_at'           => 'datetime',
-        'ended_at'             => 'datetime',
-        'transferred_to_human' => 'boolean',
+        'sold_at' => 'datetime',
+        'value'   => 'decimal:2',
     ];
-
-    public function lead()
-    {
-        return $this->belongsTo(Lead::class);
-    }
 
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function lead()
+    {
+        return $this->belongsTo(Lead::class)->withTrashed();
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
     }
 }

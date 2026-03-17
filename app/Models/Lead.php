@@ -32,4 +32,5 @@ class Lead extends Model
     public function productInterests() { return $this->hasMany(ProductInterest::class); }
     public function followups() { return $this->hasMany(Followup::class); }
     public function chatSessions() { return $this->hasMany(ChatSession::class); }
+    public function sales() { return $this->hasMany(Sale::class); }
 }

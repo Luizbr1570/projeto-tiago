@@ -26,4 +26,8 @@ class ConversationPolicy
     {
         return $user->company_id === $conversation->company_id;
     }
+    public function restore(User $user, Conversation $conversation): bool
+    {
+        return $user->company_id === $conversation->company_id;
+    }
 }

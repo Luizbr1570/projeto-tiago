@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('ai_insights', function (Blueprint $table) {
@@ -17,20 +14,17 @@ return new class extends Migration
             $table->uuid('company_id');
 
             $table->text('insight');
-            
+
             $table->timestamp('created_at')->useCurrent();
 
-            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
+            $table->softDeletes();
 
-            // PERFOMANCE
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
 
             $table->index('company_id');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('ai_insights');

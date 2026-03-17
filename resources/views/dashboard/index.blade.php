@@ -8,13 +8,17 @@
 </div>
 
 {{-- ── Cards principais ── --}}
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+<div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
     <div class="card">
-        <div class="card-label">Leads hoje</div>
+        @php
+            $periodLabels = ['today' => 'Leads hoje', '7days' => 'Leads 7 dias', '30days' => 'Leads 30 dias'];
+        @endphp
+        <div class="card-label">{{ $periodLabels[$period] ?? 'Leads hoje' }}</div>
         <div class="card-value">{{ $data['leads_today'] }}</div>
     </div>
     <div class="card">
-        <div class="card-label">Leads no mês</div>
+        @php $meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; @endphp
+        <div class="card-label">Leads no mês {{ $meses[now()->month] }}</div>
         <div class="card-value">{{ number_format($data['leads_month'], 0, ',', '.') }}</div>
     </div>
     <div class="card">
@@ -28,13 +32,16 @@
 </div>
 
 {{-- ── Gráfico leads + Produto + Transferência + Dinheiro ── --}}
-<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px;">
+<div class="grid-leads" style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px;">
 
     {{-- Gráfico de linha --}}
     <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-            <span style="font-size:13px;font-weight:600;">Leads por dia (últimos 14 dias)</span>
-            <span style="font-size:12px;color:var(--muted);">Total: {{ number_format($data['leads_month'], 0, ',', '.') }}</span>
+            @php
+                $chartLabels = ['today' => 'Leads por hora (hoje)', '7days' => 'Leads por dia (últimos 7 dias)', '30days' => 'Leads por dia (últimos 30 dias)'];
+            @endphp
+            <span style="font-size:13px;font-weight:600;">{{ $chartLabels[$period] ?? 'Leads por dia' }}</span>
+            <span style="font-size:12px;color:var(--muted);">Total: {{ number_format($data['leads_today'], 0, ',', '.') }}</span>
         </div>
         <canvas id="leadsChart" height="130"></canvas>
     </div>
@@ -44,7 +51,8 @@
 
         {{-- Produto mais buscado --}}
         <div class="card" style="flex:1;">
-            <div class="card-label">Produto mais buscado</div>
+            @php $periodProdLabels = ['today' => 'Produto mais buscado hoje', '7days' => 'Produto mais buscado (7 dias)', '30days' => 'Produto mais buscado (30 dias)']; @endphp
+            <div class="card-label">{{ $periodProdLabels[$period] ?? 'Produto mais buscado' }}</div>
             <div style="font-size:20px;font-weight:700;margin:6px 0 12px;">
                 {{ $data['top_products']->first()->name ?? '—' }}
             </div>
@@ -58,7 +66,7 @@
         </div>
 
         {{-- Taxa de transferência + Dinheiro --}}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="grid-transfer" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
 
             {{-- Donut transferência --}}
             <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
@@ -86,7 +94,7 @@
 </div>
 
 {{-- ── Funil de conversão ── --}}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+<div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
     <div class="card">
         <div style="font-size:14px;font-weight:600;margin-bottom:16px;">Funil de Conversão</div>
         @php $maxF = collect($data['funnel'])->max('value') ?: 1; @endphp
@@ -133,7 +141,7 @@
 </div>
 
 {{-- ── Horários de pico + Insights ── --}}
-<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;">
+<div class="grid-peak" style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;">
     <div class="card">
         <div style="font-size:14px;font-weight:600;margin-bottom:16px;">Horários de Pico</div>
         <canvas id="peakChart" height="90"></canvas>
@@ -143,8 +151,6 @@
             <i data-lucide="sparkles" style="width:15px;height:15px;color:var(--accent);"></i>
             <span style="font-size:14px;font-weight:600;">Insights da IA</span>
         </div>
-
-        {{-- FIX B03: usando $data['recent_insights'] do controller (não query inline) --}}
         @forelse($data['recent_insights'] as $insight)
         <div style="display:flex;gap:8px;padding:8px 0;{{ !$loop->last ? 'border-bottom:1px solid var(--border);' : '' }}">
             <div style="width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
@@ -165,6 +171,25 @@
         @endforelse
     </div>
 </div>
+
+<style>
+@media (max-width: 1024px) {
+    .grid-4       { grid-template-columns: repeat(2,1fr) !important; }
+    .grid-leads   { grid-template-columns: 1fr !important; }
+    .grid-peak    { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+    .grid-4        { grid-template-columns: repeat(2,1fr) !important; }
+    .grid-leads    { grid-template-columns: 1fr !important; }
+    .grid-2        { grid-template-columns: 1fr !important; }
+    .grid-transfer { grid-template-columns: 1fr 1fr !important; }
+    .grid-peak     { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 480px) {
+    .grid-4        { grid-template-columns: 1fr 1fr !important; }
+    .grid-transfer { grid-template-columns: 1fr !important; }
+}
+</style>
 
 @endsection
 
