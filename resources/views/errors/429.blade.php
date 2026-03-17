@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
             font-family: 'Inter', sans-serif;
             background: #0d0d14;
@@ -17,7 +18,9 @@
             justify-content: center;
             position: relative;
             overflow: hidden;
+            padding: 16px;
         }
+
         .blob {
             position: absolute;
             border-radius: 50%;
@@ -25,6 +28,7 @@
             opacity: 0.12;
             pointer-events: none;
         }
+
         .card {
             background: #13131f;
             border: 1px solid #2a2a45;
@@ -37,6 +41,7 @@
             text-align: center;
             animation: fadeUp 0.4s ease forwards;
         }
+
         .logo {
             display: flex;
             align-items: center;
@@ -50,9 +55,11 @@
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             font-size: 15px; font-weight: 800; color: #fff;
+            flex-shrink: 0;
         }
         .logo-text { font-size: 18px; font-weight: 700; }
         .logo-text span { color: #a855f7; }
+
         .icon-wrap {
             width: 64px; height: 64px;
             border-radius: 16px;
@@ -62,18 +69,21 @@
             margin: 0 auto 24px;
             font-size: 28px;
         }
+
         h1 {
             font-size: 22px;
             font-weight: 700;
             margin-bottom: 10px;
             letter-spacing: -0.5px;
         }
+
         p {
             font-size: 13px;
             color: #6b6b90;
             line-height: 1.6;
             margin-bottom: 28px;
         }
+
         .btn {
             display: inline-flex;
             align-items: center;
@@ -89,8 +99,11 @@
             font-family: 'Inter', sans-serif;
             text-decoration: none;
             transition: opacity 0.15s;
+            width: 100%;
+            justify-content: center;
         }
         .btn:hover { opacity: 0.88; }
+
         .timer {
             margin-top: 20px;
             font-size: 12px;
@@ -100,9 +113,39 @@
             color: #a855f7;
             font-weight: 600;
         }
+
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(14px); }
             to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 480px) {
+            body { padding: 16px; align-items: flex-start; padding-top: 48px; }
+
+            .card {
+                padding: 32px 24px;
+                border-radius: 14px;
+            }
+
+            .blob:first-child {
+                width: 250px; height: 250px;
+                top: -80px; left: -80px;
+            }
+            .blob:last-child {
+                width: 200px; height: 200px;
+                bottom: -60px; right: -60px;
+            }
+
+            h1 { font-size: 20px; }
+
+            .icon-wrap {
+                width: 56px; height: 56px;
+                font-size: 24px;
+                margin-bottom: 20px;
+            }
+
+            .logo { margin-bottom: 24px; }
         }
     </style>
 </head>
@@ -133,7 +176,6 @@
     </div>
 
     <script>
-        // Tenta ler o header Retry-After se disponível
         const retryAfter = {{ $exception->getHeaders()['Retry-After'] ?? 60 }};
 
         if (retryAfter > 0) {
