@@ -9,22 +9,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Remove duplicatas antes de criar a constraint, caso já existam no banco.
-        // Mantém o registro mais antigo (menor created_at) de cada par company_id+phone.
+        // Remove duplicatas mantendo o mais antigo (created_at)
         DB::statement('
             DELETE FROM leads
-            WHERE id NOT IN (
+            WHERE id IN (
                 SELECT id FROM (
-                    SELECT MIN(id) as id
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY company_id, phone
+                               ORDER BY created_at ASC
+                           ) as rn
                     FROM leads
-                    GROUP BY company_id, phone
-                ) AS keep
+                ) t
+                WHERE t.rn > 1
             )
         ');
 
         Schema::table('leads', function (Blueprint $table) {
-            // Garante que o mesmo telefone não seja cadastrado duas vezes
-            // na mesma empresa. Empresas diferentes podem ter o mesmo número.
             $table->unique(['company_id', 'phone'], 'leads_company_phone_unique');
         });
     }
