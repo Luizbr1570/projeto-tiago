@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Remove duplicatas mantendo o mais antigo (created_at)
+        // Remove duplicatas mantendo o registro mais antigo (menor id como desempate)
         DB::statement('
             DELETE FROM leads
             WHERE id IN (
@@ -17,7 +17,7 @@ return new class extends Migration
                     SELECT id,
                            ROW_NUMBER() OVER (
                                PARTITION BY company_id, phone
-                               ORDER BY created_at ASC
+                               ORDER BY created_at ASC, id ASC
                            ) as rn
                     FROM leads
                 ) t
