@@ -1,0 +1,67 @@
+services:
+
+  app:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      APP_NAME: "Soluv.IA"
+      APP_ENV: production
+      APP_KEY: base64:RZAp5h5foiWs6TG4KoUDHZr3Etcb+AmXXHTj3HvcrYo=
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: soluvdashboard
+      DB_USERNAME: soluv
+      DB_PASSWORD: soluv123
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ""
+      REDIS_PORT: 6379
+      SESSION_DRIVER: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      TZ: America/Sao_Paulo
+      LOG_CHANNEL: stack
+      LOG_LEVEL: error
+      MAIL_MAILER: smtp
+      MAIL_HOST: sandbox.smtp.mailtrap.io
+      MAIL_PORT: 2525
+      MAIL_USERNAME: 62cfaaa4d974a8
+      MAIL_PASSWORD: 32e4fc6893cb7d
+      MAIL_FROM_ADDRESS: "noreply@soluvia.com"
+      MAIL_FROM_NAME: "Soluv.IA"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - app_storage:/var/www/html/storage
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: soluvdashboard
+      POSTGRES_USER: soluv
+      POSTGRES_PASSWORD: soluv123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soluv -d soluvdashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+volumes:
+  postgres_data:
+  app_storage:

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — Soluv.IA</title>
+    <title>Redefinir senha — Soluv.IA</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -54,6 +54,16 @@
         .logo-text { font-size: 20px; font-weight: 700; }
         .logo-text span { color: #a855f7; }
 
+        .icon-wrap {
+            width: 52px; height: 52px;
+            background: rgba(168, 85, 247, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.25);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+        }
+        .icon-wrap svg { width: 24px; height: 24px; stroke: #a855f7; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
         h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
         .sub { font-size: 13px; color: #6b6b90; margin-bottom: 28px; line-height: 1.5; }
 
@@ -76,15 +86,6 @@
         .input:focus { border-color: #a855f7; }
         .input::placeholder { color: #3a3a55; }
 
-        .password-wrap {
-            position: relative;
-            margin-bottom: 6px;
-        }
-        .password-wrap .input {
-            margin-bottom: 0;
-            padding-right: 44px;
-        }
-
         .btn {
             width: 100%;
             background: linear-gradient(135deg, #a855f7, #ec4899);
@@ -103,7 +104,7 @@
         .btn:hover { opacity: 0.88; }
         .btn:active { opacity: 0.75; transform: scale(0.99); }
 
-        .alert {
+        .alert-error {
             background: rgba(255,101,132,0.1);
             color: #ff6584;
             border: 1px solid rgba(255,101,132,0.2);
@@ -114,20 +115,19 @@
             line-height: 1.5;
         }
 
-        .link { color: #a855f7; text-decoration: none; font-size: 13px; }
-        .link:hover { text-decoration: underline; }
-
-        .forgot-link {
-            display: block;
-            text-align: right;
-            font-size: 12px;
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             color: #6b6b90;
             text-decoration: none;
-            margin-bottom: 20px;
-            margin-top: 6px;
+            font-size: 13px;
+            margin-top: 22px;
+            justify-content: center;
             transition: color 0.15s;
         }
-        .forgot-link:hover { color: #a855f7; }
+        .back-link:hover { color: #a855f7; }
+        .back-link svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(14px); }
@@ -137,16 +137,7 @@
         @media (max-width: 480px) {
             body { padding: 16px 12px; align-items: flex-start; padding-top: 48px; }
             .card { padding: 28px 20px; border-radius: 12px; }
-            h2 { font-size: 18px; }
             .blob { opacity: 0.08; }
-        }
-
-        @media (max-height: 600px) and (orientation: landscape) {
-            body { align-items: flex-start; padding-top: 16px; }
-            .card { padding: 24px 28px; }
-            .logo { margin-bottom: 16px; }
-            .sub { margin-bottom: 16px; }
-            .input { margin-bottom: 10px; }
         }
     </style>
 </head>
@@ -160,34 +151,44 @@
             <div class="logo-text">Soluv<span>.IA</span></div>
         </div>
 
-        <h2>Bem-vindo de volta</h2>
-        <p class="sub">Entre na sua conta para continuar</p>
+        <div class="icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+
+        <h2>Redefinir senha</h2>
+        <p class="sub">Digite sua nova senha abaixo.</p>
 
         @if($errors->any())
-            <div class="alert">{{ $errors->first() }}</div>
+            <div class="alert-error">{{ $errors->first() }}</div>
         @endif
 
-        <form method="POST" action="{{ route('auth.login') }}">
+        <form method="POST" action="{{ route('password.update') }}">
             @csrf
+            <input type="hidden" name="token" value="{{ $token }}">
+
             <label>E-mail</label>
-            <input type="email" name="email" class="input" placeholder="seu@email.com"
-                   value="{{ old('email') }}" required autofocus
-                   autocomplete="email" inputmode="email">
+            <input type="email" name="email" class="input"
+                   placeholder="seu@email.com"
+                   value="{{ old('email', $email) }}"
+                   required autocomplete="email">
 
-            <label>Senha</label>
-            <div class="password-wrap">
-                <input type="password" name="password" class="input" placeholder="••••••••"
-                       required autocomplete="current-password">
-            </div>
+            <label>Nova senha</label>
+            <input type="password" name="password" class="input"
+                   placeholder="Mínimo 8 caracteres"
+                   required autocomplete="new-password">
 
-            <a href="{{ route('password.request') }}" class="forgot-link">Esqueceu a senha?</a>
+            <label>Confirmar nova senha</label>
+            <input type="password" name="password_confirmation" class="input"
+                   placeholder="Repita a senha"
+                   required autocomplete="new-password">
 
-            <button type="submit" class="btn">Entrar</button>
+            <button type="submit" class="btn">Redefinir senha</button>
         </form>
 
-        <p style="text-align:center;margin-top:22px;font-size:13px;color:#6b6b90;">
-            Não tem conta? <a href="{{ route('register') }}" class="link">Criar agora</a>
-        </p>
+        <a href="{{ route('login') }}" class="back-link">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar para o login
+        </a>
     </div>
 </body>
 </html>

@@ -76,16 +76,32 @@
                    onmouseover="this.style.transform='translateX(-2px)';this.style.boxShadow='0 4px 12px rgba(168,85,247,0.3)'"
                    onmouseout="this.style.transform='translateX(0)';this.style.boxShadow='none'">← Anterior</a>
             @endif
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                @foreach($leads->getUrlRange(1, $leads->lastPage()) as $page => $url)
-                    @if($page == $leads->currentPage())
+            @php
+                $current = $leads->currentPage();
+                $last    = $leads->lastPage();
+                $from    = max(1, $current - 2);
+                $to      = min($last, $current + 2);
+                if ($to - $from < 4 && $last > 4) {
+                    if ($from === 1) { $to = min($last, 5); }
+                    elseif ($to === $last) { $from = max(1, $last - 4); }
+                }
+            @endphp
+            <div style="display:flex;gap:4px;align-items:center;">
+                @if($from > 1)
+                    <a href="{{ $leads->url(1) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">1</a>
+                    @if($from > 2)<span style="padding:0 4px;color:var(--muted);font-size:12px;">…</span>@endif
+                @endif
+                @for($page = $from; $page <= $to; $page++)
+                    @if($page == $current)
                         <span style="padding:8px 12px;border-radius:6px;background:var(--accent);color:#fff;font-size:12px;font-weight:700;min-width:36px;text-align:center;">{{ $page }}</span>
                     @else
-                        <a href="{{ $url }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;transition:all 0.2s;min-width:36px;text-align:center;display:inline-block;"
-                           onmouseover="this.style.background='var(--accent)';this.style.color='#fff'"
-                           onmouseout="this.style.background='var(--surface2)';this.style.color='var(--text)'">{{ $page }}</a>
+                        <a href="{{ $leads->url($page) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">{{ $page }}</a>
                     @endif
-                @endforeach
+                @endfor
+                @if($to < $last)
+                    @if($to < $last - 1)<span style="padding:0 4px;color:var(--muted);font-size:12px;">…</span>@endif
+                    <a href="{{ $leads->url($last) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">{{ $last }}</a>
+                @endif
             </div>
             @if($leads->hasMorePages())
                 <a href="{{ $leads->nextPageUrl() }}" style="padding:8px 12px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:12px;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;"

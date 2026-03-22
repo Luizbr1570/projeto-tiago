@@ -60,6 +60,11 @@ class FollowupController extends Controller
             $validado['sent_at'] = now();
         }
 
+        if ($validado['status'] === 'recovered') {
+            $validado['recovered'] = true;
+            $validado['sent_at']   = $validado['sent_at'] ?? now();
+        }
+
         $followup->update($validado);
 
         \App\Services\MetricsCacheService::invalidate(Auth::user()->company_id);

@@ -8,7 +8,9 @@ use App\Http\Controllers\DailyMetricController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FollowupController;
+use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\FunnelController;
+use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\MetaEmbeddedSignupController;
 use App\Http\Controllers\ProductController;
@@ -24,6 +26,14 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/register', fn () => view('auth.register'))->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,60')->name('auth.register');
+
+    // Esqueci a senha
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'store'])->middleware('throttle:5,1')->name('password.email');
+
+    // Redefinir senha
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [ResetPasswordController::class, 'store'])->middleware('throttle:5,1')->name('password.update');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])

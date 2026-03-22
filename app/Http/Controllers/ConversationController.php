@@ -33,7 +33,7 @@ class ConversationController extends Controller
             $query->where('sender', $request->input('sender'));
         }
 
-        $conversations = $query->paginate(20);
+        $conversations = $query->paginate(20)->withQueryString();
 
         return view('conversations.index', compact('conversations'));
     }

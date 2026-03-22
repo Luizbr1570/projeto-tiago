@@ -36,10 +36,62 @@ class CompanySeeder extends Seeder
                 ['nome' => 'iPad Air',          'cat' => 'Tablet',     'preco' => 5999],
                 ['nome' => 'iPad Mini',         'cat' => 'Tablet',     'preco' => 4299],
                 ['nome' => 'MacBook Air M2',    'cat' => 'Computador', 'preco' => 12999],
+                ['nome' => 'MacBook Pro M3',    'cat' => 'Computador', 'preco' => 18999],
+                ['nome' => 'Apple TV 4K',       'cat' => 'Acessório',  'preco' => 1299],
             ],
-            'origens' => ['WhatsApp', 'Instagram', 'Indicação', 'Google', 'Facebook', 'TikTok'],
-            'cidades' => ['São Paulo', 'Guarulhos', 'Osasco', 'Santo André', 'São Bernardo', 'Campinas', 'Sorocaba'],
-            'leads'   => 1000,
+            'origens' => ['WhatsApp', 'Instagram', 'Indicação', 'Google', 'Facebook', 'TikTok', 'YouTube', 'Organic'],
+            'cidades' => [
+                // SP
+                'São Paulo', 'Guarulhos', 'Osasco', 'Santo André', 'São Bernardo do Campo',
+                'Campinas', 'Sorocaba', 'Ribeirão Preto', 'São José dos Campos', 'Santos',
+                'Mogi das Cruzes', 'Diadema', 'Jundiaí', 'Piracicaba', 'Bauru',
+                // RJ
+                'Rio de Janeiro', 'Niterói', 'Nova Iguaçu', 'Duque de Caxias', 'São Gonçalo',
+                'Belford Roxo', 'São João de Meriti',
+                // MG
+                'Belo Horizonte', 'Uberlândia', 'Contagem', 'Juiz de Fora', 'Betim',
+                // RS
+                'Porto Alegre', 'Caxias do Sul', 'Pelotas', 'Canoas',
+                // PR
+                'Curitiba', 'Londrina', 'Maringá', 'Joinville',
+                // BA
+                'Salvador', 'Feira de Santana',
+                // CE
+                'Fortaleza', 'Caucaia',
+                // PE
+                'Recife', 'Olinda',
+                // GO
+                'Goiânia', 'Aparecida de Goiânia',
+                // AM
+                'Manaus',
+                // PA
+                'Belém', 'Ananindeua',
+                // MA
+                'São Luís',
+                // ES
+                'Vila Velha', 'Serra',
+                // RN
+                'Natal',
+                // PB
+                'João Pessoa',
+                // PI
+                'Teresina',
+                // MS
+                'Campo Grande',
+                // MT
+                'Cuiabá',
+                // AL
+                'Maceió',
+                // SE
+                'Aracaju',
+                // RO
+                'Porto Velho',
+                // AP
+                'Macapá',
+                // Itaperuna e cidades menores
+                'Itaperuna', 'Miracema', 'Campos dos Goytacazes', 'Volta Redonda', 'Macaé',
+            ],
+            'leads' => 3000,
         ]);
     }
 
@@ -71,8 +123,8 @@ class CompanySeeder extends Seeder
         ]);
 
         // ── Produtos ──────────────────────────────────────────
-        $produtos    = $empresa['produtos'];
-        $productIds  = [];
+        $produtos      = $empresa['produtos'];
+        $productIds    = [];
         $productPrecos = [];
 
         foreach ($produtos as $p) {
@@ -90,9 +142,9 @@ class CompanySeeder extends Seeder
             $productPrecos[] = $p['preco'];
         }
 
-        // ── Leads — inserção em lotes de 100 para performance ─
+        // ── Leads — 3000, maioria de hoje ─────────────────────
         $statusList  = ['novo', 'em_conversa', 'pediu_preco', 'encaminhado', 'perdido', 'recuperacao'];
-        $statusPesos = [15, 25, 20, 15, 15, 10];
+        $statusPesos = [10, 20, 20, 20, 15, 15]; // mais encaminhados = mais vendas
         $totalLeads  = $empresa['leads'];
 
         $leadIds      = [];
@@ -104,22 +156,31 @@ class CompanySeeder extends Seeder
 
         $lote = [];
         for ($i = 0; $i < $totalLeads; $i++) {
-            $id        = (string) Str::uuid();
-            $status    = $this->randomWeighted($statusList, $statusPesos);
-            $daysAgo   = $i < ($totalLeads * 0.5) ? rand(0, 30) : rand(31, 90);
-            $createdAt = now()->subDays($daysAgo)->subHours(rand(0, 23))->subMinutes(rand(0, 59));
-            $source    = $empresa['origens'][array_rand($empresa['origens'])];
+            $id      = (string) Str::uuid();
+            $status  = $this->randomWeighted($statusList, $statusPesos);
+            $source  = $empresa['origens'][array_rand($empresa['origens'])];
+            $cidade  = $empresa['cidades'][array_rand($empresa['cidades'])];
+
+            // 60% dos leads são de hoje, 20% ontem, 20% últimos 30 dias
+            $rand = rand(1, 100);
+            if ($rand <= 60) {
+                $createdAt = now()->subHours(rand(0, 23))->subMinutes(rand(0, 59));
+            } elseif ($rand <= 80) {
+                $createdAt = now()->subDays(1)->subHours(rand(0, 23));
+            } else {
+                $createdAt = now()->subDays(rand(2, 30))->subHours(rand(0, 23));
+            }
 
             $lote[] = [
                 'id'            => $id,
                 'company_id'    => $companyId,
                 'phone'         => $this->fakePhone(),
-                'city'          => $empresa['cidades'][array_rand($empresa['cidades'])],
+                'city'          => $cidade,
                 'status'        => $status,
                 'source'        => $source,
                 'first_contact' => $createdAt,
                 'created_at'    => $createdAt,
-                'updated_at'    => $createdAt->copy()->addHours(rand(0, 48)),
+                'updated_at'    => $createdAt->copy()->addHours(rand(0, 12)),
             ];
 
             $leadIds[]      = $id;
@@ -127,7 +188,6 @@ class CompanySeeder extends Seeder
             $leadDates[]    = $createdAt->copy();
             $leadSources[]  = $source;
 
-            // Insere em lotes de 100
             if (count($lote) === 100) {
                 DB::table('leads')->insert($lote);
                 $lote = [];
@@ -137,16 +197,18 @@ class CompanySeeder extends Seeder
             DB::table('leads')->insert($lote);
         }
 
-        // ── Conversas — lotes de 200 ──────────────────────────
+        // ── Conversas — muitas! ───────────────────────────────
         $this->command->info("   Inserindo conversas...");
-        $mensagens = $this->mensagens($empresa['slug']);
+        $mensagens = $this->mensagens();
         $lote = [];
 
         foreach ($leadIds as $idx => $leadId) {
-            $qtd = $leadDates[$idx]->diffInDays(now()) < 15 ? rand(4, 12) : rand(1, 5);
+            // Leads de hoje têm mais conversas
+            $isHoje = $leadDates[$idx]->isToday();
+            $qtd    = $isHoje ? rand(8, 20) : rand(3, 10);
 
             for ($j = 0; $j < $qtd; $j++) {
-                $msgTime = $leadDates[$idx]->copy()->addMinutes(rand($j * 10, $j * 10 + 60));
+                $msgTime = $leadDates[$idx]->copy()->addMinutes(rand($j * 5, $j * 5 + 30));
                 $sender  = $j % 2 === 0 ? 'lead' : ($j % 4 === 1 ? 'bot' : 'human');
 
                 $lote[] = [
@@ -155,7 +217,7 @@ class CompanySeeder extends Seeder
                     'lead_id'       => $leadId,
                     'sender'        => $sender,
                     'message'       => $mensagens[array_rand($mensagens)],
-                    'response_time' => $sender !== 'lead' ? rand(800, 15000) : null,
+                    'response_time' => $sender !== 'lead' ? rand(500, 10000) : null,
                     'created_at'    => $msgTime,
                     'updated_at'    => $msgTime,
                 ];
@@ -172,7 +234,7 @@ class CompanySeeder extends Seeder
 
         // ── Chat Sessions ─────────────────────────────────────
         $this->command->info("   Inserindo chat sessions...");
-        $sessionCount  = min(intval($totalLeads * 0.55), count($leadIds));
+        $sessionCount  = min(intval($totalLeads * 0.70), count($leadIds));
         $sessionsLeads = (array) array_rand($leadIds, $sessionCount);
         $lote = [];
 
@@ -184,7 +246,7 @@ class CompanySeeder extends Seeder
                 'lead_id'              => $leadIds[$idx],
                 'started_at'           => $started,
                 'ended_at'             => rand(0, 3) !== 0 ? $started->copy()->addMinutes(rand(3, 90)) : null,
-                'transferred_to_human' => rand(0, 4) === 0,
+                'transferred_to_human' => rand(0, 3) === 0,
                 'created_at'           => $started,
                 'updated_at'           => $started,
             ];
@@ -199,14 +261,14 @@ class CompanySeeder extends Seeder
         }
 
         // ── Interesses em produtos ────────────────────────────
-        $this->command->info("   Inserindo interesses em produtos...");
-        $interestCount = min(intval($totalLeads * 0.75), count($leadIds));
+        $this->command->info("   Inserindo interesses...");
+        $interestCount = min(intval($totalLeads * 0.85), count($leadIds));
         $interestLeads = (array) array_rand($leadIds, $interestCount);
         $usedPairs     = [];
         $lote          = [];
 
         foreach ($interestLeads as $idx) {
-            $prodsSorteados = (array) array_rand($productIds, min(rand(1, 4), count($productIds)));
+            $prodsSorteados = (array) array_rand($productIds, min(rand(1, 5), count($productIds)));
             foreach ($prodsSorteados as $pidx) {
                 $pair = $leadIds[$idx] . '_' . $productIds[$pidx];
                 if (isset($usedPairs[$pair])) continue;
@@ -234,7 +296,7 @@ class CompanySeeder extends Seeder
         $lote = [];
         foreach ($leadIds as $idx => $leadId) {
             if (in_array($leadStatuses[$idx], ['perdido', 'recuperacao'])) {
-                $createdAt = $leadDates[$idx]->copy()->addDays(rand(1, 5));
+                $createdAt = $leadDates[$idx]->copy()->addDays(rand(1, 3));
                 $status    = $leadStatuses[$idx] === 'recuperacao'
                     ? 'recovered'
                     : collect(['pending', 'sent', 'recovered'])->random();
@@ -245,7 +307,7 @@ class CompanySeeder extends Seeder
                     'lead_id'    => $leadId,
                     'status'     => $status,
                     'sent_at'    => in_array($status, ['sent', 'recovered'])
-                        ? $createdAt->copy()->addHours(rand(1, 24))
+                        ? $createdAt->copy()->addHours(rand(1, 12))
                         : null,
                     'recovered'  => $status === 'recovered',
                     'created_at' => $createdAt,
@@ -262,33 +324,31 @@ class CompanySeeder extends Seeder
             DB::table('followups')->insert($lote);
         }
 
-        // ── Vendas — ~20% dos leads encaminhados fecham venda ─
+        // ── Vendas — ~50% dos encaminhados fecham, com quantidade ─
         $this->command->info("   Inserindo vendas...");
         $lote = [];
 
         foreach ($leadIds as $idx => $leadId) {
-            // Só leads encaminhados ou em recuperação geram venda
             if (!in_array($leadStatuses[$idx], ['encaminhado', 'recuperacao'])) continue;
-            if (rand(0, 4) !== 0) continue; // ~20% fecham
+            if (rand(0, 1) !== 0) continue; // ~50% fecham
 
-            // Cada venda tem 1-2 produtos
-            $numVendas = rand(1, 2);
+            $numVendas      = rand(1, 3); // até 3 vendas por lead
             $prodsSorteados = (array) array_rand($productIds, min($numVendas, count($productIds)));
 
             foreach ($prodsSorteados as $pidx) {
-                $soldAt = $leadDates[$idx]->copy()->addDays(rand(1, 7))->addHours(rand(9, 21));
-
-                // Variação de ±10% no preço
-                $preco = $productPrecos[$pidx];
-                $valor = round($preco * (1 + (rand(-10, 10) / 100)), 2);
+                $soldAt   = $leadDates[$idx]->copy()->addHours(rand(1, 12));
+                $preco    = $productPrecos[$pidx];
+                $valor    = round($preco * (1 + (rand(-10, 10) / 100)), 2);
+                $quantity = rand(1, 3);
 
                 $lote[] = [
                     'id'         => (string) Str::uuid(),
                     'company_id' => $companyId,
                     'lead_id'    => $leadId,
                     'product_id' => $productIds[$pidx],
-                    'value'      => $valor,
-                    'notes'      => null,
+                    'value'      => round($valor * $quantity, 2),
+                    'quantity'   => $quantity,
+                    'notes'      => rand(0, 2) === 0 ? $this->fakeNote() : null,
                     'sold_at'    => $soldAt,
                     'created_at' => $soldAt,
                     'updated_at' => $soldAt,
@@ -307,15 +367,17 @@ class CompanySeeder extends Seeder
         // ── Métricas diárias (90 dias) ────────────────────────
         $lote = [];
         for ($i = 89; $i >= 0; $i--) {
-            $leadsNoDia = rand(3, intval($totalLeads / 15));
+            // Hoje tem muito mais movimento
+            $isHoje      = $i === 0;
+            $leadsNoDia  = $isHoje ? rand(80, 120) : rand(5, intval($totalLeads / 10));
             $lote[] = [
                 'id'                => (string) Str::uuid(),
                 'company_id'        => $companyId,
                 'date'              => now()->subDays($i)->toDateString(),
                 'leads'             => $leadsNoDia,
-                'conversations'     => $leadsNoDia * rand(3, 10),
-                'recovered_leads'   => rand(0, max(1, intval($leadsNoDia * 0.25))),
-                'estimated_revenue' => $leadsNoDia * rand(2000, 12000),
+                'conversations'     => $leadsNoDia * rand(5, 15),
+                'recovered_leads'   => rand(0, max(1, intval($leadsNoDia * 0.3))),
+                'estimated_revenue' => $leadsNoDia * rand(3000, 15000),
             ];
         }
         DB::table('daily_metrics')->insert($lote);
@@ -326,13 +388,13 @@ class CompanySeeder extends Seeder
                 'id'         => (string) Str::uuid(),
                 'company_id' => $companyId,
                 'insight'    => $insight,
-                'created_at' => now()->subHours(rand(1, 72)),
+                'created_at' => now()->subHours(rand(1, 48)),
             ]);
         }
 
         // ── Resumo ────────────────────────────────────────────
-        $totalVendas = DB::table('sales')->where('company_id', $companyId)->count();
-        $totalConvs  = DB::table('conversations')->where('company_id', $companyId)->count();
+        $totalVendas  = DB::table('sales')->where('company_id', $companyId)->count();
+        $totalConvs   = DB::table('conversations')->where('company_id', $companyId)->count();
         $totalRevenue = DB::table('sales')->where('company_id', $companyId)->sum('value');
 
         $this->command->info("✅ {$empresa['name']} criada!");
@@ -346,7 +408,7 @@ class CompanySeeder extends Seeder
 
     private function fakePhone(): string
     {
-        $ddds = ['11', '21', '31', '41', '51', '61', '71', '81', '85', '92'];
+        $ddds = ['11', '21', '31', '41', '51', '61', '71', '81', '85', '92', '22', '24', '27', '28', '62', '63', '64', '65', '66', '67', '68', '69', '82', '83', '84', '86', '87', '88', '89', '91', '93', '94', '95', '96', '97', '98', '99'];
         return '(' . $ddds[array_rand($ddds)] . ') 9' . rand(1000, 9999) . '-' . rand(1000, 9999);
     }
 
@@ -362,7 +424,24 @@ class CompanySeeder extends Seeder
         return $items[0];
     }
 
-    private function mensagens(string $slug = ''): array
+    private function fakeNote(): string
+    {
+        $notas = [
+            'Cliente pediu nota fiscal',
+            'Pagamento via Pix',
+            'Parcelado em 12x',
+            'Retirada na loja',
+            'Entrega expressa',
+            'Cliente VIP',
+            'Segunda compra',
+            'Indicado por amigo',
+            'Combo com AirPods',
+            'Troca de aparelho antigo',
+        ];
+        return $notas[array_rand($notas)];
+    }
+
+    private function mensagens(): array
     {
         return [
             'Olá, tudo bem?',
@@ -395,6 +474,16 @@ class CompanySeeder extends Seeder
             'Faz entrega no mesmo dia?',
             'Tem nota fiscal?',
             'Aceita Pix com desconto?',
+            'Qual o modelo mais vendido?',
+            'Tem alguma promoção ativa?',
+            'Posso retirar pessoalmente?',
+            'Vocês são loja física ou online?',
+            'Têm loja em São Paulo?',
+            'Qual a diferença entre iPhone 14 e 15?',
+            'O MacBook Air M2 vale a pena?',
+            'AirPods Pro 2 tem cancelamento de ruído?',
+            'Quanto tempo demora a entrega?',
+            'Vocês têm suporte pós-venda?',
         ];
     }
 
@@ -413,6 +502,9 @@ class CompanySeeder extends Seeder
             'iPhone 14 está sendo buscado como alternativa econômica ao 15',
             '22% dos leads abandonam após pedir o preço sem resposta em 10 min',
             'Horário de pico aos sábados: 10h às 12h',
+            'Leads do TikTok cresceram 45% essa semana',
+            'MacBook Pro M3 tem ticket médio 2x maior que os demais',
+            'Cidades do interior estão respondendo melhor às campanhas',
         ];
     }
 }

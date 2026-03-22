@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="/leaflet.css"/>
+    <script src="/leaflet.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -45,7 +47,7 @@
             position: fixed;
             top: 0; left: 0; bottom: 0;
             z-index: 50;
-            overflow: hidden; /* FIX: impede textos de vazar quando recolhido */
+            overflow: hidden;
             transition: width 0.22s ease, transform 0.25s ease;
         }
         .sidebar-logo {
@@ -94,7 +96,6 @@
         }
         .nav-item.active svg { color: var(--accent); }
 
-        /* Overlay para fechar sidebar no mobile */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -123,7 +124,6 @@
             position: sticky; top: 0; z-index: 40;
         }
 
-        /* Barra de filtros mobile — separada da topbar */
         .filter-bar-mobile {
             display: none;
             background: var(--surface);
@@ -132,7 +132,6 @@
             gap: 6px;
         }
 
-        /* Botão toggle — visível em todos os tamanhos */
         .menu-toggle {
             display: flex;
             background: none; border: none;
@@ -143,32 +142,14 @@
         .menu-toggle:hover { color: var(--text); }
         .menu-toggle svg { width: 20px; height: 20px; }
 
-        /* Sidebar recolhida (só ícones) — desktop/tablet */
-        .sidebar.collapsed {
-            width: 56px;
-            overflow: hidden; /* FIX: corta textos que vazavam */
-        }
+        .sidebar.collapsed { width: 56px; overflow: hidden; }
         .sidebar.collapsed .logo-text,
         .sidebar.collapsed .nav-item span,
-        .sidebar.collapsed .nav-text {
-            display: none;
-        }
-        .sidebar.collapsed .sidebar-logo {
-            justify-content: center;
-            padding: 22px 0 18px;
-        }
-        .sidebar.collapsed .nav-item {
-            justify-content: center;
-            padding: 9px 0;
-            gap: 0; /* FIX: remove gap quando só ícone */
-        }
-        .sidebar.collapsed nav {
-            padding: 12px 6px;
-        }
-        .sidebar.collapsed .btn-logout {
-            justify-content: center;
-            padding: 8px 0;
-        }
+        .sidebar.collapsed .nav-text { display: none; }
+        .sidebar.collapsed .sidebar-logo { justify-content: center; padding: 22px 0 18px; }
+        .sidebar.collapsed .nav-item { justify-content: center; padding: 9px 0; gap: 0; }
+        .sidebar.collapsed nav { padding: 12px 6px; }
+        .sidebar.collapsed .btn-logout { justify-content: center; padding: 8px 0; }
         .sidebar.collapsed .btn-logout .nav-text { display: none; }
         .main-wrap { transition: margin-left 0.22s ease; }
 
@@ -191,29 +172,21 @@
 
         .filter-btns { display: flex; gap: 6px; margin-left: auto; }
         .filter-btn {
-            padding: 5px 12px;
-            border-radius: 6px;
+            padding: 5px 12px; border-radius: 6px;
             font-size: 12px; font-weight: 500;
             border: 1px solid var(--border);
-            background: var(--surface2);
-            color: var(--muted);
-            cursor: pointer;
-            transition: all 0.15s;
+            background: var(--surface2); color: var(--muted);
+            cursor: pointer; transition: all 0.15s;
             font-family: 'Inter', sans-serif;
         }
-        .filter-btn:hover, .filter-btn.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
-        }
+        .filter-btn:hover, .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
         .btn-export {
             display: flex; align-items: center; gap: 6px;
             padding: 6px 14px;
             background: linear-gradient(135deg, var(--accent), var(--accent2));
             border: none; border-radius: 7px;
             color: #fff; font-size: 12px; font-weight: 600;
-            cursor: pointer; font-family: 'Inter', sans-serif;
-            transition: opacity 0.15s;
+            cursor: pointer; font-family: 'Inter', sans-serif; transition: opacity 0.15s;
         }
         .btn-export:hover { opacity: 0.9; }
         .topbar-icons { display: flex; align-items: center; gap: 12px; margin-left: 16px; }
@@ -230,42 +203,21 @@
         .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
         .page-header p  { font-size: 13px; color: var(--muted); margin-top: 3px; }
 
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-        }
-        .card-label {
-            font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 6px;
-        }
-        .card-value {
-            font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1;
-        }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .card-label { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+        .card-value { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
 
         .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 18px; }
         .alert-success { background: rgba(67,233,123,0.1); color: #43e97b; border: 1px solid rgba(67,233,123,0.2); }
         .alert-error   { background: rgba(255,101,132,0.1); color: #ff6584; border: 1px solid rgba(255,101,132,0.2); }
 
         table { width: 100%; border-collapse: collapse; }
-        th {
-            text-align: left; font-size: 11px; font-weight: 600;
-            letter-spacing: 0.5px; color: var(--muted);
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--border);
-        }
-        td {
-            padding: 12px 14px; font-size: 13px;
-            border-bottom: 1px solid rgba(42,42,69,0.5);
-        }
+        th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid rgba(42,42,69,0.5); }
         tr:hover td { background: rgba(168,85,247,0.04); }
         tr:last-child td { border-bottom: none; }
 
-        .badge {
-            display: inline-flex; align-items: center;
-            padding: 3px 10px; border-radius: 20px;
-            font-size: 11px; font-weight: 600;
-        }
+        .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-novo        { background: rgba(168,85,247,0.15); color: #a855f7; }
         .badge-em_conversa { background: rgba(67,233,123,0.15); color: #43e97b; }
         .badge-pediu_preco { background: rgba(255,193,7,0.15);  color: #ffc107; }
@@ -320,39 +272,18 @@
             background: var(--surface2); color: var(--muted);
             text-decoration: none; transition: all 0.15s; margin: 0 2px;
         }
-        [aria-label="Pagination"] a:hover {
-            background: var(--surface3); color: var(--text); border-color: var(--accent);
-        }
+        [aria-label="Pagination"] a:hover { background: var(--surface3); color: var(--text); border-color: var(--accent); }
         [aria-label="Pagination"] [aria-current="page"] > span,
-        [aria-label="Pagination"] span[aria-current="page"] {
-            background: var(--accent); color: #fff; border-color: var(--accent);
-        }
-        [aria-label="Pagination"] span.cursor-default {
-            opacity: 0.4; cursor: default;
-        }
+        [aria-label="Pagination"] span[aria-current="page"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+        [aria-label="Pagination"] span.cursor-default { opacity: 0.4; cursor: default; }
 
-        /* ════ RESPONSIVO ════ */
-
-        /* Desktop (> 1024px): sidebar fixa, toggle recolhe para ícones */
-
-        /* Tablet e Mobile (≤ 1024px): sidebar vira gaveta */
         @media (max-width: 1024px) {
-            .sidebar {
-                transform: translateX(-100%);
-                width: 220px !important;
-            }
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            /* Cancela o collapsed no tablet/mobile */
-            .sidebar.collapsed {
-                width: 220px !important;
-            }
+            .sidebar { transform: translateX(-100%); width: 220px !important; }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar.collapsed { width: 220px !important; }
             .sidebar.collapsed .logo-text,
             .sidebar.collapsed .nav-item span,
-            .sidebar.collapsed .nav-text {
-                display: revert !important;
-            }
+            .sidebar.collapsed .nav-text { display: revert !important; }
             .sidebar.collapsed .sidebar-logo { justify-content: flex-start !important; padding: 22px 20px 18px !important; }
             .sidebar.collapsed .nav-item { justify-content: flex-start !important; padding: 9px 12px !important; }
             .sidebar.collapsed nav { padding: 12px 10px !important; }
@@ -362,7 +293,6 @@
             .filter-btn { padding: 5px 9px; font-size: 11px; }
         }
 
-        /* Mobile (≤ 768px) */
         @media (max-width: 768px) {
             .topbar { padding: 0 16px; gap: 8px; height: 56px; flex-wrap: nowrap; }
             .search-bar { max-width: 100%; flex: 1; }
@@ -377,34 +307,25 @@
             .card-value { font-size: 26px; }
         }
 
-        /* Mobile pequeno (≤ 480px) */
         @media (max-width: 480px) {
             .topbar { height: 50px; }
             .page { padding: 12px; }
         }
 
-        /* ── Modal de confirmação ── */
         .confirm-overlay {
-            display: none;
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.75);
-            z-index: 200;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75); z-index: 200;
+            align-items: center; justify-content: center; padding: 20px;
         }
         .confirm-overlay.active { display: flex; }
         .confirm-box {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 28px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 28px;
             width: 100%; max-width: 380px;
             animation: fadeIn 0.2s ease forwards;
         }
         .confirm-icon {
-            width: 44px; height: 44px;
-            border-radius: 10px;
+            width: 44px; height: 44px; border-radius: 10px;
             background: rgba(255,101,132,0.12);
             display: flex; align-items: center; justify-content: center;
             margin-bottom: 16px;
@@ -414,46 +335,37 @@
         .confirm-actions { display: flex; gap: 10px; }
         .confirm-actions .btn { flex: 1; justify-content: center; }
 
-        /* ── Toast desfazer ── */
         .undo-toast {
-            position: fixed;
-            bottom: 28px; left: 50%;
+            position: fixed; bottom: 28px; left: 50%;
             transform: translateX(-50%) translateY(80px);
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px 18px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; padding: 12px 18px;
             display: flex; align-items: center; gap: 14px;
-            font-size: 13px;
-            z-index: 300;
+            font-size: 13px; z-index: 300;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4);
             transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease;
-            opacity: 0;
-            white-space: nowrap;
+            opacity: 0; white-space: nowrap;
         }
         .undo-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         .undo-toast-msg { color: var(--muted2); }
         .undo-toast-msg strong { color: var(--text); }
         .undo-btn {
-            background: none; border: none;
-            color: var(--accent); font-size: 13px; font-weight: 600;
-            cursor: pointer; font-family: 'Inter', sans-serif;
-            padding: 0; transition: opacity 0.15s;
+            background: none; border: none; color: var(--accent);
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            font-family: 'Inter', sans-serif; padding: 0; transition: opacity 0.15s;
         }
         .undo-btn:hover { opacity: 0.75; }
         .undo-progress {
             position: absolute; bottom: 0; left: 0;
             height: 3px; border-radius: 0 0 10px 10px;
-            background: var(--accent);
-            width: 100%;
-            transform-origin: left;
-            transition: transform linear;
+            background: var(--accent); width: 100%;
+            transform-origin: left; transition: transform linear;
         }
     </style>
+    @stack('styles')
 </head>
 <body>
 
-{{-- Modal de confirmação global --}}
 <div class="confirm-overlay" id="confirmOverlay">
     <div class="confirm-box">
         <div class="confirm-icon">
@@ -470,14 +382,12 @@
     </div>
 </div>
 
-{{-- Toast desfazer global --}}
 <div class="undo-toast" id="undoToast">
     <span class="undo-toast-msg" id="undoMsg">Item removido</span>
     <button class="undo-btn" id="undoBtn">↩ Desfazer</button>
     <div class="undo-progress" id="undoProgress"></div>
 </div>
 
-{{-- Overlay escurece fundo quando sidebar abre no mobile --}}
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <aside class="sidebar" id="sidebar">
@@ -543,11 +453,9 @@
 
 <div class="main-wrap">
     <header class="topbar">
-        {{-- Hamburguer (só no mobile) --}}
         <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
             <i data-lucide="menu"></i>
         </button>
-
         <form method="GET" action="{{ route('leads.index') }}" style="flex:1;max-width:380px;">
             <div class="search-bar">
                 <i data-lucide="search"></i>
@@ -557,9 +465,7 @@
         @yield('topbar-extra')
         <div class="filter-btns">
             @if(request()->routeIs('dashboard') || request()->routeIs('sales.*'))
-            @php
-                $periodBase = request()->routeIs('sales.*') ? route('sales.index') : route('dashboard');
-            @endphp
+            @php $periodBase = request()->routeIs('sales.*') ? route('sales.index') : route('dashboard'); @endphp
             <a href="{{ $periodBase . '?period=today' }}"  class="filter-btn {{ request('period','today') === 'today'  ? 'active' : '' }}">Hoje</a>
             <a href="{{ $periodBase . '?period=7days' }}"  class="filter-btn {{ request('period') === '7days'           ? 'active' : '' }}">7 dias</a>
             <a href="{{ $periodBase . '?period=30days' }}" class="filter-btn {{ request('period') === '30days'          ? 'active' : '' }}">30 dias</a>
@@ -577,7 +483,6 @@
         </div>
     </header>
 
-    {{-- Barra de filtros — só aparece no mobile (≤ 768px) --}}
     @if(request()->routeIs('dashboard') || request()->routeIs('sales.*') || auth()->user()->role === 'admin')
     <div class="filter-bar-mobile">
         @if(request()->routeIs('dashboard') || request()->routeIs('sales.*'))
@@ -613,11 +518,9 @@
 
     function toggleSidebar() {
         if (isTabletOrMobile()) {
-            // Tablet/Mobile: gaveta
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('sidebarOverlay').classList.toggle('active');
         } else {
-            // Desktop: recolhe para ícones
             var sidebar = document.getElementById('sidebar');
             var mainWrap = document.querySelector('.main-wrap');
             sidebar.classList.toggle('collapsed');
@@ -637,20 +540,16 @@
         document.getElementById('sidebarOverlay').classList.remove('active');
     }
 
-    // Fecha gaveta ao clicar em link no tablet/mobile
     document.querySelectorAll('.sidebar .nav-item').forEach(function(el) {
         el.addEventListener('click', function() {
             if (isTabletOrMobile()) closeSidebar();
         });
     });
 
-    // Restaura estado collapse ao carregar (só desktop > 1024px)
     window.addEventListener('DOMContentLoaded', function() {
         var sidebar  = document.getElementById('sidebar');
         var mainWrap = document.querySelector('.main-wrap');
-
         if (window.innerWidth > 1024) {
-            // Desktop: restaura collapsed se salvo
             if (localStorage.getItem('sidebar-collapsed') === '1') {
                 sidebar.classList.add('collapsed');
                 mainWrap.style.marginLeft = '56px';
@@ -658,13 +557,11 @@
                 mainWrap.style.marginLeft = '200px';
             }
         } else {
-            // Tablet/mobile: FORÇA margin-left:0 independente do localStorage
             mainWrap.style.marginLeft = '0px';
             sidebar.classList.remove('collapsed');
         }
     });
 
-    // Recalcula ao redimensionar janela
     window.addEventListener('resize', function() {
         var sidebar  = document.getElementById('sidebar');
         var mainWrap = document.querySelector('.main-wrap');
@@ -676,23 +573,20 @@
             mainWrap.style.marginLeft = sidebar.classList.contains('collapsed') ? '56px' : '200px';
         }
     });
-    // ── Modal de confirmação + Toast desfazer ────────────────────────────────
+
     var _undoRestoreUrl = null;
     var _undoTimer      = null;
 
     function confirmDelete(btn, label, deleteUrl, restoreUrl) {
         _undoRestoreUrl = restoreUrl || null;
-
         document.getElementById('confirmTitle').textContent = 'Remover ' + label;
         document.getElementById('confirmMsg').textContent =
             'Tem certeza que deseja remover este ' + label.toLowerCase() +
             '? Você terá 6 segundos para desfazer.';
-
         document.getElementById('confirmBtn').onclick = function() {
             closeConfirm();
             _submitDelete(deleteUrl, label);
         };
-
         document.getElementById('confirmOverlay').classList.add('active');
         lucide.createIcons();
     }
@@ -707,7 +601,6 @@
 
     function _submitDelete(deleteUrl, label) {
         var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
         fetch(deleteUrl, {
             method: 'POST',
             headers: {
@@ -749,10 +642,8 @@
         var toast    = document.getElementById('undoToast');
         var progress = document.getElementById('undoProgress');
         var msg      = document.getElementById('undoMsg');
-
         msg.innerHTML = '<strong>' + label + '</strong> removido';
         toast.classList.add('show');
-
         progress.style.transition = 'none';
         progress.style.transform  = 'scaleX(1)';
         requestAnimationFrame(function() {
@@ -761,7 +652,6 @@
                 progress.style.transform  = 'scaleX(0)';
             });
         });
-
         _undoTimer = setTimeout(function() {
             toast.classList.remove('show');
             _undoRestoreUrl = null;
@@ -772,7 +662,6 @@
         if (!_undoRestoreUrl) return;
         clearTimeout(_undoTimer);
         document.getElementById('undoToast').classList.remove('show');
-
         var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         fetch(_undoRestoreUrl, {
             method: 'POST',
@@ -784,11 +673,8 @@
         })
         .then(function() { window.location.reload(); })
         .catch(function() { window.location.reload(); });
-
         _undoRestoreUrl = null;
     });
-
-
 </script>
 <script>lucide.createIcons();</script>
 @stack('scripts')

@@ -21,4 +21,5 @@ class Product extends Model
 
     public function company() { return $this->belongsTo(Company::class); }
     public function interests() { return $this->hasMany(ProductInterest::class); }
+    public function sales(){return $this->hasMany(\App\Models\Sale::class);}
 }

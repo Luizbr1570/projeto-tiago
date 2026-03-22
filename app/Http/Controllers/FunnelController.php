@@ -59,11 +59,20 @@ class FunnelController extends Controller
             $lost         = Lead::where('company_id', $companyId)->where('status', 'perdido')->count();
             $recoveryRate = $lost > 0 ? round(($recovered / $lost) * 100, 1) : 0;
 
-            return compact('funnel', 'timeline', 'recovered', 'lost', 'recoveryRate', 'total');
+            $leads_by_city = Lead::where('company_id', $companyId)
+                ->whereNotNull('city')
+                ->where('city', '!=', '')
+                ->selectRaw('city, count(*) as count')
+                ->groupBy('city')
+                ->orderByDesc('count')
+                ->limit(20)
+                ->get();
+
+            return compact('funnel', 'timeline', 'recovered', 'lost', 'recoveryRate', 'total', 'leads_by_city');
         });
 
         extract($cached);
 
-        return view('funnel.index', compact('funnel', 'timeline', 'recovered', 'lost', 'recoveryRate', 'total'));
+        return view('funnel.index', compact('funnel', 'timeline', 'recovered', 'lost', 'recoveryRate', 'total', 'leads_by_city'));
     }
 }

@@ -71,17 +71,26 @@
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;{{ !$loop->last ? 'border-bottom:1px solid var(--border);' : '' }}">
                 <div>
                     <div style="font-size:13px;font-weight:600;color:#43e97b;">R$ {{ number_format($sale->value, 2, ',', '.') }}</div>
+                    <div style="font-size:11px;color:var(--accent);font-weight:500;">
+                        @if($sale->product){{ $sale->product->name }} @endif<span style="color:var(--muted);">× {{ $sale->quantity ?? 1 }}</span>
+                    </div>
                     @if($sale->notes)
                     <div style="font-size:11px;color:var(--muted);">{{ $sale->notes }}</div>
                     @endif
                     <div style="font-size:10px;color:var(--muted);">{{ $sale->sold_at->format('d/m/Y H:i') }}</div>
                 </div>
-                <form method="POST" action="{{ route('sales.destroy', $sale->id) }}">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-danger" style="padding:4px 8px;">
+                {{-- Botões editar e deletar --}}
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <button type="button" class="btn btn-ghost" style="padding:4px 8px;"
+                        onclick="openEditSale('{{ $sale->id }}','{{ $sale->value }}',{{ Js::from($sale->notes ?? '') }},'{{ $sale->product_id ?? '' }}','{{ $sale->quantity ?? 1 }}')">
+                        <i data-lucide="pencil" style="width:11px;height:11px;"></i>
+                    </button>
+                    <button type="button" class="btn btn-danger" style="padding:4px 8px;"
+                        data-delete-url="{{ route('sales.destroy', $sale->id) }}"
+                        onclick="confirmDelete(this,'Venda','{{ route('sales.destroy', $sale->id) }}','{{ route('sales.restore', $sale->id) }}')">
                         <i data-lucide="trash-2" style="width:11px;height:11px;"></i>
                     </button>
-                </form>
+                </div>
             </div>
             @empty
             <div style="text-align:center;padding:16px 0;color:var(--muted);font-size:12px;">Nenhuma venda registrada</div>
@@ -150,7 +159,7 @@
 
 {{-- Modal registrar venda --}}
 <div id="modal-sale" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)this.style.display='none'">
-    <div class="card" style="width:100%;max-width:400px;">
+    <div class="card" style="width:100%;max-width:420px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
             <h3 style="font-size:15px;font-weight:700;">Registrar Venda</h3>
             <button onclick="document.getElementById('modal-sale').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;">
@@ -159,14 +168,49 @@
         </div>
         <form method="POST" action="{{ route('sales.store', $lead->id) }}">
             @csrf
+
             <div style="margin-bottom:14px;">
-                <label>Valor da venda (R$) *</label>
-                <input type="number" name="value" class="input" placeholder="5000.00" step="0.01" min="0.01" required>
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">PRODUTO</label>
+                <select name="product_id" id="product-select" class="input">
+                    <option value="" data-price="">— Selecionar produto (opcional) —</option>
+                    @foreach($products as $product)
+                        <option value="{{ $product->id }}" data-price="{{ $product->avg_price ?? '' }}">
+                            {{ $product->name }}
+                            @if($product->avg_price)
+                                — R$ {{ number_format($product->avg_price, 2, ',', '.') }}
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
             </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">QUANTIDADE</label>
+                <div style="display:flex;align-items:center;width:100%;">
+                    <button type="button" onclick="changeQty(-1)" style="width:44px;height:42px;background:var(--surface2);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
+                    <input type="number" name="quantity" id="qty-input" class="input"
+                           value="1" min="1" max="9999"
+                           style="margin-bottom:0;border-radius:0;text-align:center;border-left:none;border-right:none;flex:1;min-width:0;font-size:15px;font-weight:600;">
+                    <button type="button" onclick="changeQty(1)" style="width:44px;height:42px;background:var(--surface2);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">VALOR TOTAL (R$) *</label>
+                <input type="number" name="value" id="sale-value" class="input"
+                       placeholder="0,00" step="0.01" min="0.01" required
+                       style="margin-bottom:0;">
+            </div>
+
+            <div id="price-hint" style="display:none;font-size:11px;color:var(--muted);margin-bottom:14px;padding:7px 10px;background:var(--surface2);border-radius:6px;">
+                <span id="price-hint-text"></span>
+            </div>
+
             <div style="margin-bottom:20px;">
-                <label>Observação</label>
-                <input type="text" name="notes" class="input" placeholder="Ex: iPhone 15 Pro 256GB">
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">OBSERVAÇÃO</label>
+                <input type="text" name="notes" class="input" placeholder="Ex: iPhone 15 Pro 256GB preto" style="margin-bottom:0;">
             </div>
+
             <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
                 <i data-lucide="check" style="width:14px;height:14px;"></i> Confirmar venda
             </button>
@@ -174,22 +218,153 @@
     </div>
 </div>
 
+{{-- Modal editar venda --}}
+<div id="modal-edit-sale" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="card" style="width:100%;max-width:420px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h3 style="font-size:15px;font-weight:700;">Editar Venda</h3>
+            <button onclick="document.getElementById('modal-edit-sale').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;">
+                <i data-lucide="x" style="width:16px;height:16px;"></i>
+            </button>
+        </div>
+        <form method="POST" id="form-edit-sale" action="">
+            @csrf @method('PATCH')
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">PRODUTO</label>
+                <select name="product_id" id="edit-sale-product" class="input">
+                    <option value="" data-price="">— Nenhum —</option>
+                    @foreach($products as $product)
+                    <option value="{{ $product->id }}" data-price="{{ $product->avg_price ?? '' }}">{{ $product->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">QUANTIDADE</label>
+                <div style="display:flex;align-items:center;width:100%;">
+                    <button type="button" onclick="changeEditQty(-1)" style="width:44px;height:42px;background:var(--surface2);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
+                    <input type="number" name="quantity" id="edit-qty-input" class="input"
+                           value="1" min="1" max="9999"
+                           style="margin-bottom:0;border-radius:0;text-align:center;border-left:none;border-right:none;flex:1;min-width:0;font-size:15px;font-weight:600;">
+                    <button type="button" onclick="changeEditQty(1)" style="width:44px;height:42px;background:var(--surface2);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">VALOR TOTAL (R$) *</label>
+                <input type="number" name="value" id="edit-sale-value" class="input" step="0.01" min="0.01" required>
+            </div>
+            <div id="edit-price-hint" style="display:none;font-size:11px;color:var(--muted);margin-bottom:14px;padding:7px 10px;background:var(--surface2);border-radius:6px;">
+                <span id="edit-price-hint-text"></span>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">OBSERVAÇÃO</label>
+                <input type="text" name="notes" id="edit-sale-notes" class="input" placeholder="Ex: iPhone 15 Pro 256GB">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+                <i data-lucide="save" style="width:14px;height:14px;"></i> Salvar alterações
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentPrice = 0;
+
+    function changeQty(delta) {
+        const input = document.getElementById('qty-input');
+        input.value = Math.max(1, Math.min(9999, parseInt(input.value || 1) + delta));
+        recalcTotal();
+    }
+
+    document.getElementById('qty-input').addEventListener('input', recalcTotal);
+
+    document.getElementById('product-select').addEventListener('change', function () {
+        currentPrice = parseFloat(this.options[this.selectedIndex].dataset.price) || 0;
+        recalcTotal();
+    });
+
+    function recalcTotal() {
+        const qty        = parseInt(document.getElementById('qty-input').value) || 1;
+        const hint       = document.getElementById('price-hint');
+        const hintText   = document.getElementById('price-hint-text');
+        const valueInput = document.getElementById('sale-value');
+
+        if (currentPrice > 0) {
+            const total = (currentPrice * qty).toFixed(2);
+            valueInput.value = total;
+            hintText.textContent = qty + ' × R$ ' + currentPrice.toLocaleString('pt-BR', {minimumFractionDigits:2}) + ' = R$ ' + parseFloat(total).toLocaleString('pt-BR', {minimumFractionDigits:2});
+            hint.style.display = 'block';
+        } else {
+            hint.style.display = 'none';
+        }
+    }
+
+    // ── Modal editar venda ────────────────────────────────────────────────
+    let editCurrentPrice = 0;
+
+    function changeEditQty(delta) {
+        const input = document.getElementById('edit-qty-input');
+        input.value = Math.max(1, Math.min(9999, parseInt(input.value || 1) + delta));
+        recalcEditTotal();
+    }
+
+    document.getElementById('edit-qty-input').addEventListener('input', recalcEditTotal);
+
+    document.getElementById('edit-sale-product').addEventListener('change', function () {
+        editCurrentPrice = parseFloat(this.options[this.selectedIndex].dataset.price) || 0;
+        recalcEditTotal();
+    });
+
+    function recalcEditTotal() {
+        const qty      = parseInt(document.getElementById('edit-qty-input').value) || 1;
+        const hint     = document.getElementById('edit-price-hint');
+        const hintText = document.getElementById('edit-price-hint-text');
+        const valInput = document.getElementById('edit-sale-value');
+
+        if (editCurrentPrice > 0) {
+            const total = (editCurrentPrice * qty).toFixed(2);
+            valInput.value = total;
+            hintText.textContent = qty + ' × R$ ' + editCurrentPrice.toLocaleString('pt-BR', {minimumFractionDigits:2}) + ' = R$ ' + parseFloat(total).toLocaleString('pt-BR', {minimumFractionDigits:2});
+            hint.style.display = 'block';
+        } else {
+            hint.style.display = 'none';
+        }
+    }
+
+    function openEditSale(id, value, notes, productId, quantity) {
+        // Seta os campos
+        document.getElementById('edit-sale-notes').value   = notes;
+        document.getElementById('edit-qty-input').value    = quantity || 1;
+        document.getElementById('form-edit-sale').action   = '/sales/' + id;
+
+        // Seta o produto e busca o preço automaticamente
+        const productSelect = document.getElementById('edit-sale-product');
+        productSelect.value = productId || '';
+
+        // Pega o preço do produto selecionado
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        editCurrentPrice = parseFloat(selectedOption?.dataset?.price) || 0;
+
+        if (editCurrentPrice > 0) {
+            // Recalcula automaticamente com a quantidade carregada
+            recalcEditTotal();
+        } else {
+            // Sem produto com preço, mantém o valor original da venda
+            document.getElementById('edit-sale-value').value = value;
+            document.getElementById('edit-price-hint').style.display = 'none';
+        }
+
+        document.getElementById('modal-edit-sale').style.display = 'flex';
+        lucide.createIcons();
+    }
+</script>
+
 <style>
 @media (max-width: 768px) {
-    .lead-show-grid {
-        grid-template-columns: 1fr !important;
-    }
-    .lead-show-grid > div:first-child {
-        /* Info e status lado a lado no mobile */
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-    }
+    .lead-show-grid { grid-template-columns: 1fr !important; }
+    .lead-show-grid > div:first-child { display: grid !important; grid-template-columns: 1fr 1fr; gap: 12px; }
 }
 @media (max-width: 480px) {
-    .lead-show-grid > div:first-child {
-        grid-template-columns: 1fr !important;
-    }
+    .lead-show-grid > div:first-child { grid-template-columns: 1fr !important; }
 }
 </style>
 

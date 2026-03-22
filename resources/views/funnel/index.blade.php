@@ -74,73 +74,65 @@
     </div>
 </div>
 
-{{-- Tabela detalhada --}}
-<div class="card" style="padding:0;overflow:hidden;">
+{{-- Mapa de leads por cidade --}}
+<div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
-        <span style="font-size:14px;font-weight:600;">Detalhamento por status</span>
-    </div>
-
-    {{-- Tabela — desktop --}}
-    <div class="funil-table-desktop" style="overflow-x:auto;">
-        <table style="min-width:480px;">
-            <thead>
-                <tr>
-                    <th>Status</th>
-                    <th>Quantidade</th>
-                    <th>% do total</th>
-                    <th>Visualização</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($funnel as $step)
-                <tr>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <div style="width:8px;height:8px;border-radius:50%;background:{{ $step['color'] }};"></div>
-                            <span class="badge badge-{{ $step['status'] }}">{{ $step['label'] }}</span>
-                        </div>
-                    </td>
-                    <td style="font-weight:600;">{{ number_format($step['count']) }}</td>
-                    <td style="color:var(--muted);">{{ $step['pct'] }}%</td>
-                    <td style="width:180px;">
-                        <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
-                            <div style="height:100%;width:{{ $step['pct'] }}%;background:{{ $step['color'] }};border-radius:4px;"></div>
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-
-    {{-- Cards — mobile (substitui tabela) --}}
-    <div class="funil-table-mobile" style="display:none;padding:12px;gap:8px;flex-direction:column;">
-        @foreach($funnel as $step)
-        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:8px;background:{{ $step['color'] }}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <div style="width:10px;height:10px;border-radius:50%;background:{{ $step['color'] }};"></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Leads por região</div>
+                <div style="font-size:12px;color:var(--muted);">Cada círculo representa uma cidade. O tamanho indica o volume de leads.</div>
             </div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:12px;font-weight:600;margin-bottom:6px;">{{ $step['label'] }}</div>
-                <div style="background:var(--surface);border-radius:4px;height:6px;overflow:hidden;">
-                    <div style="height:100%;width:{{ $step['pct'] }}%;background:{{ $step['color'] }};border-radius:4px;"></div>
+            {{-- Legenda de cores --}}
+            <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#a855f7;"></span>
+                    <span style="font-size:11px;color:var(--muted2);">Alto volume <span style="color:var(--muted);">(+70% do máximo)</span></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ec4899;"></span>
+                    <span style="font-size:11px;color:var(--muted2);">Volume médio <span style="color:var(--muted);">(40–70%)</span></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#0dcaf0;"></span>
+                    <span style="font-size:11px;color:var(--muted2);">Baixo volume <span style="color:var(--muted);">(até 40%)</span></span>
                 </div>
             </div>
-            <div style="text-align:right;flex-shrink:0;">
-                <div style="font-size:16px;font-weight:700;">{{ number_format($step['count']) }}</div>
-                <div style="font-size:11px;color:var(--muted);">{{ $step['pct'] }}%</div>
-            </div>
         </div>
-        @endforeach
+    </div>
+    <div style="display:grid;gap:0;align-items:start;" class="funil-map-grid">
+        <div id="funil-map" style="height:380px;min-height:380px;overflow:hidden;"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;padding:16px;border-left:1px solid var(--border);">
+            @php $maxCity = $leads_by_city->max('count') ?: 1; @endphp
+            @forelse($leads_by_city->take(10) as $i => $city)
+            <div style="padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
+                        <span style="width:18px;height:18px;border-radius:50%;background:rgba(168,85,247,0.2);color:#a855f7;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ $i+1 }}</span>
+                        {{ $city->city }}
+                    </span>
+                    <span style="font-size:11px;font-weight:700;color:#a855f7;">{{ number_format($city->count) }}</span>
+                </div>
+                <div style="background:var(--border);border-radius:4px;height:4px;overflow:hidden;">
+                    <div style="height:100%;width:{{ round(($city->count / $maxCity) * 100) }}%;background:linear-gradient(90deg,#a855f7,#ec4899);border-radius:4px;"></div>
+                </div>
+                <div style="font-size:10px;color:var(--muted);margin-top:4px;">{{ $city->count }} {{ $city->count == 1 ? 'lead' : 'leads' }}</div>
+            </div>
+            @empty
+            <div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Nenhum lead com cidade preenchida</div>
+            @endforelse
+        </div>
     </div>
 </div>
 
 <style>
+.funil-map-grid { grid-template-columns: 1fr 280px; }
+@media (max-width: 900px) {
+    .funil-map-grid { grid-template-columns: 1fr !important; }
+    #funil-map { height: 280px !important; }
+}
 @media (max-width: 768px) {
     .funil-cards         { grid-template-columns: repeat(2,1fr) !important; }
     .funil-grid          { grid-template-columns: 1fr !important; }
-    .funil-table-desktop { display: none !important; }
-    .funil-table-mobile  { display: flex !important; }
 }
 @media (max-width: 480px) {
     .funil-cards  { grid-template-columns: 1fr 1fr !important; }
@@ -176,6 +168,77 @@ new Chart(document.getElementById('funnelDonut'), {
                 }
             }
         }
+    }
+});
+
+// ── Mapa de leads por cidade ──────────────────────────────────────────────
+const leadsByCity = @json($leads_by_city);
+
+// Cache com localStorage — persiste entre recarregamentos
+const _coordsCache = JSON.parse(localStorage.getItem('cityCoords') || '{}');
+
+async function getCoordsForCity(name) {
+    if (!name) return null;
+    const key = name.trim().toLowerCase();
+
+    // Se já tem no cache do navegador, retorna direto
+    if (_coordsCache[key] !== undefined) return _coordsCache[key];
+
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name + ', Brasil')}&format=json&limit=1`,
+            { headers: { 'Accept-Language': 'pt-BR' } }
+        );
+        const data = await res.json();
+        if (data.length > 0) {
+            const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+            _coordsCache[key] = coords;
+            localStorage.setItem('cityCoords', JSON.stringify(_coordsCache));
+            return coords;
+        }
+    } catch(e) {}
+
+    _coordsCache[key] = null;
+    localStorage.setItem('cityCoords', JSON.stringify(_coordsCache));
+    return null;
+}
+
+window.addEventListener('load', async function() {
+    const L = window.L;
+    if (!L) return;
+
+    if (leadsByCity.length > 0) {
+        const map = L.map('funil-map', { zoomControl: true, scrollWheelZoom: false })
+            .setView([-15.7801, -47.9292], 4);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors', maxZoom: 18
+        }).addTo(map);
+
+        setTimeout(() => map.invalidateSize(), 300);
+        setTimeout(() => map.invalidateSize(), 800);
+
+        const maxVal = Math.max(...leadsByCity.map(c => c.count));
+
+        for (const city of leadsByCity) {
+            const coords = await getCoordsForCity(city.city);
+            if (!coords) continue;
+
+            const pct   = city.count / maxVal;
+            const color = pct > 0.7 ? '#a855f7' : pct > 0.4 ? '#ec4899' : '#0dcaf0';
+            L.circleMarker(coords, {
+                radius: 10 + pct * 35, fillColor: color, color, weight: 1,
+                opacity: 0.9, fillOpacity: 0.35,
+            }).addTo(map).bindPopup(
+                `<div style="font-family:Inter,sans-serif;font-size:13px;min-width:140px;">
+                    <strong>${city.city}</strong><br>
+                    <span style="color:#a855f7;font-weight:700;">${city.count} ${city.count == 1 ? 'lead' : 'leads'}</span>
+                </div>`
+            );
+        }
+    } else {
+        document.getElementById('funil-map').innerHTML =
+            '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6b6b90;font-size:13px;">Nenhum lead com cidade preenchida</div>';
     }
 });
 </script>

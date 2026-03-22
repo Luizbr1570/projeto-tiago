@@ -23,6 +23,9 @@ class MetricsService
     protected string $period;
     protected ?float $conversionBase   = null;
     protected ?float $conversionWithAi = null;
+    private ?float $memoRevenueReal    = null;
+    private ?float $memoTicketAverage  = null;
+    private ?int   $memoLeadsRecovered = null;
 
     public function __construct(string $companyId, string $period = 'today')
     {
@@ -118,14 +121,17 @@ class MetricsService
 
     public function ticketAverage(): float
     {
+        if ($this->memoTicketAverage !== null) {
+            return $this->memoTicketAverage;
+        }
         // Usa média de TODAS as vendas históricas — igual ao cálculo da página de vendas.
         // Não filtra por período para manter consistência entre dashboard e página de vendas.
         $avg = $this->query(Sale::class)->avg('value');
         if ($avg !== null) {
-            return round($avg, 2);
+            return $this->memoTicketAverage = round($avg, 2);
         }
         // Fallback: média dos preços dos produtos enquanto não há vendas
-        return round($this->query(Product::class)->avg('avg_price') ?? 0, 2);
+        return $this->memoTicketAverage = round($this->query(Product::class)->avg('avg_price') ?? 0, 2);
     }
 
     public function transferRate(): float
@@ -247,9 +253,11 @@ class MetricsService
     public function peakHours(): \Illuminate\Support\Collection
     {
         $driver   = DB::getDriverName();
-        $hourExpr = $driver === 'sqlite'
-            ? "CAST(strftime('%H', conversations.created_at) AS INTEGER) as hour"
-            : 'HOUR(conversations.created_at) as hour';
+        $hourExpr = $driver === 'pgsql'
+            ? "EXTRACT(HOUR FROM conversations.created_at)::integer as hour"
+            : ($driver === 'sqlite'
+                ? "CAST(strftime('%H', conversations.created_at) AS INTEGER) as hour"
+                : 'HOUR(conversations.created_at) as hour');
 
         return $this->applyPeriod($this->query(Conversation::class), 'conversations.created_at')
             ->selectRaw($hourExpr . ', count(*) as total')
@@ -275,8 +283,7 @@ class MetricsService
 
     public function leadsRecovered(): int
     {
-        // sent_at é quando o followup foi enviado/marcado como recuperado
-        return $this->applyPeriod($this->query(Followup::class), 'sent_at')
+        return $this->memoLeadsRecovered ??= $this->applyPeriod($this->query(Followup::class), 'sent_at')
             ->where('recovered', true)
             ->whereNotNull('sent_at')
             ->count();
@@ -299,7 +306,7 @@ class MetricsService
 
     public function revenueReal(): float
     {
-        return round(
+        return $this->memoRevenueReal ??= round(
             (float) $this->applyPeriod($this->query(Sale::class), 'sold_at')->sum('value'),
             2
         );
@@ -351,9 +358,11 @@ class MetricsService
     public function leadsPerMonth(): \Illuminate\Support\Collection
     {
         $driver     = DB::getDriverName();
-        $monthExpr  = $driver === 'sqlite'
-            ? "strftime('%Y-%m', created_at) as month"
-            : "DATE_FORMAT(created_at, '%Y-%m') as month";
+        $monthExpr  = $driver === 'pgsql'
+            ? "TO_CHAR(created_at, 'YYYY-MM') as month"
+            : ($driver === 'sqlite'
+                ? "strftime('%Y-%m', created_at) as month"
+                : "DATE_FORMAT(created_at, '%Y-%m') as month");
 
         return $this->query(Lead::class)
             ->selectRaw("{$monthExpr}, count(*) as total")

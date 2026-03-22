@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -58,12 +59,16 @@ class LeadController extends Controller
 
         $this->authorize('view', $lead);
 
-        // Paginado para não carregar centenas de mensagens de uma vez
         $conversations = $lead->conversations()
             ->orderBy('created_at', 'asc')
             ->paginate(50);
 
-        return view('leads.show', compact('lead', 'conversations'));
+        // Produtos da empresa para o modal de registrar venda
+        $products = Product::where('company_id', Auth::user()->company_id)
+            ->orderBy('name')
+            ->get();
+
+        return view('leads.show', compact('lead', 'conversations', 'products'));
     }
 
     public function update(Request $request, string $id)

@@ -76,16 +76,32 @@
                    onmouseout="this.style.transform='translateX(0)';this.style.boxShadow='none'">← Anterior</a>
             @endif
 
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                @foreach($sessions->getUrlRange(1, $sessions->lastPage()) as $page => $url)
-                    @if($page == $sessions->currentPage())
+            @php
+                $current = $sessions->currentPage();
+                $last    = $sessions->lastPage();
+                $from    = max(1, $current - 2);
+                $to      = min($last, $current + 2);
+                if ($to - $from < 4 && $last > 4) {
+                    if ($from === 1) { $to = min($last, 5); }
+                    elseif ($to === $last) { $from = max(1, $last - 4); }
+                }
+            @endphp
+            <div style="display:flex;gap:4px;align-items:center;">
+                @if($from > 1)
+                    <a href="{{ $sessions->url(1) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">1</a>
+                    @if($from > 2)<span style="padding:0 4px;color:var(--muted);font-size:12px;">…</span>@endif
+                @endif
+                @for($page = $from; $page <= $to; $page++)
+                    @if($page == $current)
                         <span style="padding:8px 12px;border-radius:6px;background:var(--accent);color:#fff;font-size:12px;font-weight:700;min-width:36px;text-align:center;">{{ $page }}</span>
                     @else
-                        <a href="{{ $url }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;transition:all 0.2s;min-width:36px;text-align:center;display:inline-block;"
-                           onmouseover="this.style.background='var(--accent)';this.style.color='#fff'"
-                           onmouseout="this.style.background='var(--surface2)';this.style.color='var(--text)'">{{ $page }}</a>
+                        <a href="{{ $sessions->url($page) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">{{ $page }}</a>
                     @endif
-                @endforeach
+                @endfor
+                @if($to < $last)
+                    @if($to < $last - 1)<span style="padding:0 4px;color:var(--muted);font-size:12px;">…</span>@endif
+                    <a href="{{ $sessions->url($last) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">{{ $last }}</a>
+                @endif
             </div>
 
             @if($sessions->hasMorePages())

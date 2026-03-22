@@ -104,6 +104,57 @@
     </div>
 </div>
 
+{{-- Mapa de vendas por cidade --}}
+<div class="card" style="margin-bottom:20px;">
+    <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:10px;">
+            <div>
+                <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Vendas por região</div>
+                <div style="font-size:12px;color:var(--muted);">Cada círculo representa uma cidade. O tamanho indica o valor total vendido.</div>
+            </div>
+        </div>
+        {{-- Legenda de cores --}}
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#43e97b;"></span>
+                <span style="font-size:11px;color:var(--muted2);">Alta receita <span style="color:var(--muted);">(+70% do máximo)</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#a855f7;"></span>
+                <span style="font-size:11px;color:var(--muted2);">Receita média <span style="color:var(--muted);">(40–70%)</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ec4899;"></span>
+                <span style="font-size:11px;color:var(--muted2);">Baixa receita <span style="color:var(--muted);">(até 40%)</span></span>
+            </div>
+        </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start;" class="map-grid">
+        <div id="sales-map" style="height:380px;min-height:380px;border-radius:10px;overflow:hidden;border:1px solid var(--border);"></div>
+        {{-- Ranking lateral --}}
+        <div style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;">
+            @php $maxCity = $sales_by_city->max('total') ?: 1; @endphp
+            @forelse($sales_by_city->take(10) as $i => $city)
+            <div style="padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
+                        <span style="width:18px;height:18px;border-radius:50%;background:rgba(168,85,247,0.2);color:#a855f7;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ $i+1 }}</span>
+                        {{ $city->city }}
+                    </span>
+                    <span style="font-size:11px;font-weight:700;color:#43e97b;">R$ {{ number_format($city->total, 0, ',', '.') }}</span>
+                </div>
+                <div style="background:var(--border);border-radius:4px;height:4px;overflow:hidden;">
+                    <div style="height:100%;width:{{ round(($city->total / $maxCity) * 100) }}%;background:linear-gradient(90deg,#a855f7,#ec4899);border-radius:4px;"></div>
+                </div>
+                <div style="font-size:10px;color:var(--muted);margin-top:4px;">{{ $city->count }} {{ $city->count == 1 ? 'venda' : 'vendas' }}</div>
+            </div>
+            @empty
+            <div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Nenhuma venda com cidade preenchida</div>
+            @endforelse
+        </div>
+    </div>
+</div>
+
 {{-- Top 5 leads --}}
 @if($top_leads->count())
 <div class="card" style="margin-bottom:20px;">
@@ -122,7 +173,6 @@
             <div style="font-size:13px;font-weight:700;color:#43e97b;min-width:110px;text-align:right;">
                 R$ {{ number_format($tl->total, 2, ',', '.') }}
             </div>
-            {{-- Barra proporcional --}}
             <div style="width:80px;background:rgba(255,255,255,0.05);border-radius:4px;height:6px;flex-shrink:0;">
                 <div style="height:100%;width:{{ $top_leads->first()->total > 0 ? round(($tl->total / $top_leads->first()->total) * 100) : 0 }}%;background:#a855f7;border-radius:4px;"></div>
             </div>
@@ -179,7 +229,7 @@
                     <td>
                         <div style="display:flex;gap:6px;justify-content:flex-end;">
                             <button type="button" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;"
-                                onclick="openEditModal('{{ $sale->id }}','{{ $sale->value }}','{{ addslashes($sale->notes ?? '') }}','{{ $sale->product_id ?? '' }}')">
+                                onclick="openEditModal('{{ $sale->id }}','{{ $sale->value }}','{{ Js::from($sale->notes ?? '') }}','{{ $sale->product_id ?? '' }}')">
                                 <i data-lucide="pencil" style="width:12px;height:12px;"></i>
                             </button>
                             <button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:12px;"
@@ -198,30 +248,33 @@
     </div>
 
     @if($sales->hasPages())
-    @php
-        $current = $sales->currentPage();
-        $last    = $sales->lastPage();
-        $from    = max(1, $current - 2);
-        $to      = min($last, $current + 2);
-        if ($to - $from < 4 && $last > 4) {
-            if ($from === 1) { $to = min($last, 5); }
-            elseif ($to === $last) { $from = max(1, $last - 4); }
-        }
-    @endphp
-    <div style="padding:20px;border-top:2px solid var(--border);background:linear-gradient(135deg,var(--surface),var(--surface2));display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div style="padding:20px;border-top:2px solid var(--border);background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
         <div style="font-size:13px;color:var(--muted);font-weight:500;">
             💰 Mostrando <strong style="color:var(--accent);">{{ $sales->firstItem() }}</strong> a <strong style="color:var(--accent);">{{ $sales->lastItem() }}</strong> de <strong style="color:var(--accent);">{{ $sales->total() }}</strong> registros
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             @if($sales->onFirstPage())
-                <span style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;opacity:0.5;cursor:not-allowed;">← Anterior</span>
+                <span style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;cursor:not-allowed;opacity:0.5;">← Anterior</span>
             @else
-                <a href="{{ $sales->previousPageUrl() }}" style="padding:8px 12px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:12px;font-weight:600;">← Anterior</a>
+                <a href="{{ $sales->previousPageUrl() }}" style="padding:8px 12px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:12px;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;"
+                   onmouseover="this.style.transform='translateX(-2px)';this.style.boxShadow='0 4px 12px rgba(168,85,247,0.3)'"
+                   onmouseout="this.style.transform='translateX(0)';this.style.boxShadow='none'">← Anterior</a>
             @endif
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+
+            @php
+                $current = $sales->currentPage();
+                $last    = $sales->lastPage();
+                $from    = max(1, $current - 2);
+                $to      = min($last, $current + 2);
+                if ($to - $from < 4 && $last > 4) {
+                    if ($from === 1) { $to = min($last, 5); }
+                    elseif ($to === $last) { $from = max(1, $last - 4); }
+                }
+            @endphp
+            <div style="display:flex;gap:4px;align-items:center;">
                 @if($from > 1)
                     <a href="{{ $sales->url(1) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">1</a>
-                    @if($from > 2)<span style="padding:8px 4px;color:var(--muted);font-size:12px;">…</span>@endif
+                    @if($from > 2)<span style="padding:0 4px;color:var(--muted);font-size:12px;">…</span>@endif
                 @endif
                 @for($page = $from; $page <= $to; $page++)
                     @if($page == $current)
@@ -231,14 +284,17 @@
                     @endif
                 @endfor
                 @if($to < $last)
-                    @if($to < $last - 1)<span style="padding:8px 4px;color:var(--muted);font-size:12px;">…</span>@endif
+                    @if($to < $last - 1)<span style="padding:0 4px;color:var(--muted);font-size:12px;">…</span>@endif
                     <a href="{{ $sales->url($last) }}" style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;min-width:36px;text-align:center;">{{ $last }}</a>
                 @endif
             </div>
+
             @if($sales->hasMorePages())
-                <a href="{{ $sales->nextPageUrl() }}" style="padding:8px 12px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:12px;font-weight:600;">Próxima →</a>
+                <a href="{{ $sales->nextPageUrl() }}" style="padding:8px 12px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:12px;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;"
+                   onmouseover="this.style.transform='translateX(2px)';this.style.boxShadow='0 4px 12px rgba(168,85,247,0.3)'"
+                   onmouseout="this.style.transform='translateX(0)';this.style.boxShadow='none'">Próxima →</a>
             @else
-                <span style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;opacity:0.5;cursor:not-allowed;">Próxima →</span>
+                <span style="padding:8px 12px;border-radius:6px;background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;cursor:not-allowed;opacity:0.5;">Próxima →</span>
             @endif
         </div>
     </div>
@@ -278,7 +334,7 @@
         @endif
         <div style="display:flex;gap:8px;">
             <button type="button" class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px;padding:7px;"
-                onclick="openEditModal('{{ $sale->id }}','{{ $sale->value }}','{{ addslashes($sale->notes ?? '') }}','{{ $sale->product_id ?? '' }}')">
+                onclick="openEditModal('{{ $sale->id }}','{{ $sale->value }}','{{ Js::from($sale->notes ?? '') }}','{{ $sale->product_id ?? '' }}')">
                 <i data-lucide="pencil" style="width:13px;height:13px;"></i> Editar
             </button>
             <button type="button" class="btn btn-danger" style="padding:7px 12px;font-size:12px;"
@@ -347,7 +403,6 @@
 </div>
 
 <style>
-/* ── Header ──────────────────────────────────────────────── */
 .sales-page-header {
     display: flex;
     align-items: flex-start;
@@ -355,43 +410,30 @@
     flex-wrap: wrap;
     gap: 12px;
 }
-
-/* ── Filtros ─────────────────────────────────────────────── */
 .sales-filters {
     display: flex;
     gap: 8px;
     margin-bottom: 20px;
     flex-wrap: wrap;
 }
-
-/* ── Cards resumo ────────────────────────────────────────── */
-/* desktop: 4 colunas → tablet: 2 → mobile: 2 → xs: 1 */
 .sales-summary {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
     margin-bottom: 20px;
 }
-
-/* ── Gráficos lado a lado ────────────────────────────────── */
 .charts-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
     margin-bottom: 20px;
 }
-
-/* ── Tabela / cards ──────────────────────────────────────── */
 .sales-table-desktop { display: block; }
 .sales-cards-mobile  { display: none;  }
-
-/* ── Breakpoint: tablet (≤1024px) ───────────────────────── */
 @media (max-width: 1024px) {
     .sales-summary { grid-template-columns: repeat(2, 1fr); }
     .charts-row    { grid-template-columns: 1fr; }
 }
-
-/* ── Breakpoint: mobile (≤768px) ────────────────────────── */
 @media (max-width: 768px) {
     .sales-page-header        { flex-direction: column; gap: 10px; }
     .btn-export-sales         { width: 100%; justify-content: center; }
@@ -401,8 +443,11 @@
     .sales-table-desktop      { display: none !important; }
     .sales-cards-mobile       { display: flex !important; }
 }
-
-/* ── Breakpoint: extra small (≤480px) ───────────────────── */
+.map-grid { grid-template-columns: 1fr 280px; }
+@media (max-width: 900px) {
+    .map-grid { grid-template-columns: 1fr !important; }
+    #sales-map { height: 280px !important; }
+}
 @media (max-width: 480px) {
     .sales-summary { grid-template-columns: 1fr 1fr; gap: 8px; }
     .sales-summary .card { padding: 12px 14px; }
@@ -422,7 +467,6 @@ const gridColor  = 'rgba(100,100,150,0.15)';
 const tickColor  = '#6b6b90';
 const tickFont   = { size: 11 };
 
-// ── Gráfico 1: vendas por dia ──────────────────────────────────────────────
 new Chart(document.getElementById('salesChart'), {
     type: 'bar',
     data: {
@@ -473,7 +517,6 @@ new Chart(document.getElementById('salesChart'), {
     }
 });
 
-// ── Gráfico 2: top produtos ────────────────────────────────────────────────
 new Chart(document.getElementById('productChart'), {
     type: 'bar',
     data: {
@@ -504,7 +547,6 @@ new Chart(document.getElementById('productChart'), {
     }
 });
 
-// ── Gráfico 3: por categoria (donut) ──────────────────────────────────────
 new Chart(document.getElementById('categoryChart'), {
     type: 'doughnut',
     data: {
@@ -530,7 +572,6 @@ new Chart(document.getElementById('categoryChart'), {
     }
 });
 
-// ── Gráfico 4: por origem do lead ─────────────────────────────────────────
 new Chart(document.getElementById('sourceChart'), {
     type: 'bar',
     data: {
@@ -572,7 +613,6 @@ new Chart(document.getElementById('sourceChart'), {
     }
 });
 
-// ── Gráfico 5: horário de pico ────────────────────────────────────────────
 new Chart(document.getElementById('hourChart'), {
     type: 'bar',
     data: {
@@ -601,7 +641,6 @@ new Chart(document.getElementById('hourChart'), {
     }
 });
 
-// ── Modal editar ──────────────────────────────────────────────────────────
 function openEditModal(id, value, notes, productId) {
     document.getElementById('edit-sale-value').value   = value;
     document.getElementById('edit-sale-notes').value   = notes;
@@ -611,6 +650,82 @@ function openEditModal(id, value, notes, productId) {
     lucide.createIcons();
 }
 </script>
+<script>
+// ── Mapa de vendas por cidade ─────────────────────────────────────────────
+const salesByCity = @json($sales_by_city);
+
+// Cache com localStorage — persiste entre recarregamentos
+const _coordsCache = JSON.parse(localStorage.getItem('cityCoords') || '{}');
+
+async function getCoordsForCity(name) {
+    if (!name) return null;
+    const key = name.trim().toLowerCase();
+
+    // Se já tem no cache do navegador, retorna direto
+    if (_coordsCache[key] !== undefined) return _coordsCache[key];
+
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name + ', Brasil')}&format=json&limit=1`,
+            { headers: { 'Accept-Language': 'pt-BR' } }
+        );
+        const data = await res.json();
+        if (data.length > 0) {
+            const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+            _coordsCache[key] = coords;
+            localStorage.setItem('cityCoords', JSON.stringify(_coordsCache));
+            return coords;
+        }
+    } catch(e) {}
+
+    _coordsCache[key] = null;
+    localStorage.setItem('cityCoords', JSON.stringify(_coordsCache));
+    return null;
+}
+
+window.addEventListener('load', async function() {
+    const L = window.L;
+    if (!L) { console.error('Leaflet não carregou'); return; }
+
+    if (salesByCity.length > 0) {
+        const map = L.map('sales-map', { zoomControl: true, scrollWheelZoom: false })
+            .setView([-15.7801, -47.9292], 4);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+        setTimeout(() => map.invalidateSize(), 300);
+        setTimeout(() => map.invalidateSize(), 800);
+
+        const maxVal = Math.max(...salesByCity.map(c => c.total));
+
+        for (const city of salesByCity) {
+            const coords = await getCoordsForCity(city.city);
+            if (!coords) continue;
+
+            const pct   = city.total / maxVal;
+            const color = pct > 0.7 ? '#43e97b' : pct > 0.4 ? '#a855f7' : '#ec4899';
+
+            L.circleMarker(coords, {
+                radius: 10 + pct * 35, fillColor: color, color, weight: 1.5,
+                opacity: 0.9, fillOpacity: 0.5 + (pct * 0.3),
+            }).addTo(map).bindPopup(
+                `<div style="font-family:Inter,sans-serif;font-size:13px;min-width:160px;">
+                    <strong>${city.city}</strong><br>
+                    <span style="color:#43e97b;font-weight:700;">R$ ${parseFloat(city.total).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span><br>
+                    <span style="color:#888;">${city.count} ${city.count==1?'venda':'vendas'}</span>
+                </div>`
+            );
+        }
+    } else {
+        document.getElementById('sales-map').innerHTML =
+            '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6b6b90;font-size:13px;">Nenhuma venda com cidade preenchida</div>';
+    }
+});
+</script>
+
 @endpush
 
 @endsection

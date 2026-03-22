@@ -16,7 +16,7 @@ class Sale extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'company_id', 'lead_id', 'product_id', 'value', 'notes', 'sold_at',
+        'company_id', 'lead_id', 'product_id', 'value', 'notes', 'sold_at', 'quantity'
     ];
 
     protected $casts = [
